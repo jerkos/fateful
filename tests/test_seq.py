@@ -2,7 +2,7 @@ import unittest
 import types
 
 from seito.seq import seq
-from seito.underscore import _
+from seito.underscore import underscore as _
 
 
 class A(object):
@@ -49,18 +49,9 @@ class Test(unittest.TestCase):
             [17, 26, 37])
 
     def test_calling_extern_function(self):
-        def power(x, p): return x ** p
+        def power2(p, x):
+            return p ** x
 
-        def power2(p, x): return p ** x
-
-        # self.assertEqual(
-        #     (seq(A(4), A(5), A(6))
-        #      .stream()
-        #      .map(_.get_x())
-        #      .map(power, 2)
-        #      .to_list()),
-        #     [16, 25, 36]
-        # )
         self.assertEqual(
             (seq(4, 5, 6)
              .stream()
@@ -68,15 +59,3 @@ class Test(unittest.TestCase):
              .to_list()),
             [16, 25, 36]
         )
-
-    def test_str_map(self):
-        def power2(x):
-            return x * 3
-        globals().update(locals())
-        result = seq(A(1), A(2), A(3)).str_map(
-            'value = __.get_x()',
-            'value = power2(value)',
-            'value',
-            env=globals()).to_list()
-        self.assertIsInstance(result, list)
-        self.assertEqual(result, [3, 6, 9])

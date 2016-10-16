@@ -7,16 +7,16 @@ def obj(*args):
     return JsObject(*args)
 
 
-def parse(string):
-    return JsObject(json.loads(string))
+def parse(string, *args, **kwargs):
+    return JsObject(json.loads(string, *args, **kwargs))
 
 
 class JsObject(dict):
     def __init__(self, *args):
         super(JsObject, self).__init__(*args)
 
-    def __str__(self):
-        return json.dumps(self)
+    def stringify(self, **kwargs):
+        return json.dumps(self, **kwargs)
 
     def __getitem__(self, item: str) -> Option:
         try:

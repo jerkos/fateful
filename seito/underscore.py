@@ -1,15 +1,15 @@
 import operator
 
-identity = lambda x: x
+
+def identity(x): return x
 
 
 class Underscore(object):
     def __init__(self, f=identity):
         self.f = f
-    # .map(_.get_x())
 
     def __getattr__(self, item):
-        # return flist([f(elem, *args, **kwargs) for elem in self])
+        # f should be identity function a this point
         t = operator.attrgetter(item)
         return Underscore(lambda x: t(self.f(x)))
 
@@ -38,4 +38,4 @@ class Underscore(object):
         return Underscore(lambda x, *ag, **kw: self.f(x, *ag, **kw) ** power)
 
 
-_ = Underscore()
+underscore = Underscore()

@@ -5,13 +5,6 @@ class Option(object):
         self.is_nothing = not self.is_some
 
     def get(self):
-        """
-        example:
-            >>> import option
-            >>> option.opt(None).get()
-            Traceback (most recent call last):
-        :return:
-        """
         if self.is_nothing:
             raise ValueError('Option is empty')
         return self.__under
@@ -21,13 +14,19 @@ class Option(object):
 
     def or_else(self, obj, *args, **kwargs) -> object:
         value = self.__get_val(obj, *args, **kwargs)
+        if self.is_nothing:
+            return value
+        return self.__under
+
+    def if_false(self, obj, *args, **kwargs) -> object:
+        value = self.__get_val(obj, *args, **kwargs)
         return self.__under or value
 
     def or_none(self):
         return self.__under or None
 
     def map(self, func, *args, **kwargs) -> 'Option':
-        if self.__under is not None:
+        if self.is_some:
             return option(func(self.__under, *args, **kwargs))
         return self
 
@@ -42,7 +41,7 @@ class Option(object):
         raise StopIteration
 
     def __getattr__(self, name):
-        if self.__under is not None:
+        if self.is_some:
             try:
                 attr = getattr(self.__under, name)
             except AttributeError:
@@ -52,7 +51,7 @@ class Option(object):
                     return option(attr(*args, **kwargs))
 
                 return wrapper
-            return attr
+            return option(attr)
         return none
 
     def __call__(self, *args, **kwargs):
@@ -67,8 +66,10 @@ class Option(object):
             return obj(*args, **kwargs)
         return obj
 
+
 def option(value):
     return Option(value)
+
 
 opt = option
 none = option(None)
