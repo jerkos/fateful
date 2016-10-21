@@ -2,7 +2,7 @@ import unittest
 import types
 
 from seito.seq import seq
-from seito.underscore import underscore as _
+from seito.underscore import underscore as _, seito_rdy
 
 
 class A(object):
@@ -10,9 +10,11 @@ class A(object):
         self.x = x
 
     def get_x(self):
+        print(self.x)
         return self.x
 
     def power(self, p):
+        print(self.x ** p)
         return self.x ** p
 
 
@@ -36,11 +38,11 @@ class Test(unittest.TestCase):
 
     def test_getting_attribute_from_underscore(self):
         self.assertEqual(
-            seq(A(4), A(5), A(6)).stream().map(_.get_x()).to_list(),
-            [4, 5, 6])
+            seq(A(4), A(5), A(6)).stream().for_each(_.get_x()),
+            None)
         self.assertEqual(
-            seq(A(4), A(5), A(6)).stream().map(_.power(2)).to_list(),
-            [16, 25, 36]
+            seq(A(4), A(5), A(6)).stream().for_each(_.power(2)),
+            None
         )
 
     def test_add_element_from_underscore(self):
@@ -59,3 +61,29 @@ class Test(unittest.TestCase):
              .to_list()),
             [16, 25, 36]
         )
+
+    def test_for_each_with_arguments(self):
+        def print_sum(x, y):
+            print(x + y)
+
+        self.assertEqual(seq(1, 2, 3).stream().for_each(print_sum, 1, _), None)
+        self.assertEqual(seq(1, 2, 3).stream().for_each(print_sum, _, 1), None)
+        self.assertEqual(seq(1, 2, 3).stream().for_each(print), None)
+        self.assertEqual(seq(1, 2, 3).stream().for_each(print, _), None)
+        self.assertEqual(seq(1, 2, 3).stream().for_each(print_sum, 2), None)
+
+    def test_decorator(self):
+        @seito_rdy
+        def print_sum(x, y):
+            print(x + y)
+
+        seq(1, 2, 3).stream().for_each(print_sum(_, 2))
+        seq(A(1), A(2), A(3)).stream().for_each(_.get_x())
+
+    def test_dict(self):
+        def print_x_y(x, y):
+            print(x, y)
+        print_x_y = seito_rdy(print_x_y)
+
+        seq({1: 2, 3: 4}).for_each(print_x_y(_._1, _._2))
+        seq({1: A(2), 3: A(4)}).for_each(_._2.get_x())

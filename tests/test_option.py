@@ -54,4 +54,4 @@ class Test(unittest.TestCase):
         self.assertEqual(len(op), 5)
         print(option('value').get_or('') is none)
 
-        option([]).or_if_empty([1, 2, 3])
+        self.assertEqual(option([]).or_if_false([1, 2, 3]), [1, 2, 3])

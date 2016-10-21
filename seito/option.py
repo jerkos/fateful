@@ -18,7 +18,7 @@ class Option(object):
             return value
         return self.__under
 
-    def if_false(self, obj, *args, **kwargs) -> object:
+    def or_if_false(self, obj, *args, **kwargs) -> object:
         value = self.__get_val(obj, *args, **kwargs)
         return self.__under or value
 
