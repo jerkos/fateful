@@ -6,19 +6,6 @@ def identity(x): return x
 
 def seito_rdy(f):
     return Underscore(lambda *a, **kw: f(*a, **kw))
-    # return u # Underscore(lambda *a, **kw: f(*a, **kw))
-
-
-class TupleElements(object):
-    pass
-
-
-class Tuple1(TupleElements):
-    pass
-
-
-class Tuple2(TupleElements):
-    pass
 
 
 class Underscore(object):
@@ -31,11 +18,6 @@ class Underscore(object):
         self.is_endpoint = is_endpoint
 
     def __getattr__(self, item):
-        # if not self.arity:
-        #     if item == '_1':
-        #         return Tuple1()
-        #     elif item == '_2':
-        #         return Tuple2()
         # f should be identity function a this point
         t = operator.attrgetter(item)
         if item == '_1':

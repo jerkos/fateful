@@ -16,6 +16,4 @@ class Test(unittest.TestCase):
         i = obj({'z-index': 1000})
         self.assertEqual(i.stringify(sort_keys=True),
                          '''{"z-index": 1000}''')
-        self.assertEqual(str(i, sort_keys=True),
-                         '''{"z-index": 1000}''')
 

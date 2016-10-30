@@ -70,6 +70,6 @@ class Option(object):
 def option(value):
     return Option(value)
 
-
+# aliases
 opt = option
 none = option(None)

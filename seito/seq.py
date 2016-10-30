@@ -1,7 +1,7 @@
 import collections
 import types
 
-from seito.underscore import Underscore, Tuple1, Tuple2
+from seito.underscore import Underscore
 
 
 class Seq(object):
