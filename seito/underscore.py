@@ -56,3 +56,5 @@ class Underscore(object):
 
 
 underscore = Underscore()
+
+id_ = seito_rdy(identity)

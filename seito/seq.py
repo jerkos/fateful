@@ -22,62 +22,88 @@ class Seq(object):
 
     @staticmethod
     def _substitute(args, kwargs, elem):
-        # replace underscore
-        #sa = tuple(elem if Seq._is_underscore(y) else y for y in args)
-        #ka = dict((k, elem) if Seq._is_underscore(v) else (k, v) for k, v in kwargs.items())
-        #return sa, ka
-        # replace tuplevalue
-        sa_t = []
-        for a in args:
-            if Seq._is_underscore(a) and a.is_endpoint:
-                sa_t.append(a.apply_f(elem))
-            else:
-                sa_t.append(elem)
-        ka_t = {}
-        for (k, v) in kwargs.items():
-            if Seq._is_underscore(v) and v.is_endpoint:
-                ka_t[k] = v.apply_f(elem)
-            else:
-                ka_t[k] = elem
-        return tuple(sa_t), ka_t
+        def is_underscore_and_endpoint(x):
+            return Seq._is_underscore(x) and x.is_endpoint
+        sa = []
+        skw = {}
 
-    def for_each(self, f, *args, **kwargs):
+        def arg_unit_handle(x, y):
+            if is_underscore_and_endpoint(x):
+                sa.append(x.apply_f(y))
+            elif isinstance(x, collections.Iterable):
+                sa.append(tuple(i.apply_f(elem) if is_underscore_and_endpoint(i) else elem
+                                for i in x))
+            else:
+                sa.append(y)
+
+        def kwarg_unit_handle(k, x, y):
+            if is_underscore_and_endpoint(x):
+                skw[k] = x.apply_f(y)
+            elif isinstance(kwargs[k], collections.Iterable):
+                skw[k] = tuple(i.apply_f(elem) if is_underscore_and_endpoint(i) else elem
+                               for i in x)
+            else:
+                skw[k] = y
+
+        for arg in args:
+            arg_unit_handle(arg, elem)
+
+        for (key, value) in kwargs.items():
+            kwarg_unit_handle(key, value, elem)
+
+        return sa, skw
+        # sa_t = tuple(a.apply_f(elem) if is_underscore_and_endpoint(a) else elem
+        #              for a in args)
+        # ka_t = dict((k, v.apply_f(elem)) if is_underscore_and_endpoint(v) else (k, elem)
+        #             for (k, v) in kwargs.items())
+        # return sa_t, ka_t
+
+    def _get_f(self, elem, f, *args, **kwargs):
         if len(args) > 1:
             # first is the function to call
             # others the arguments needed
-            for elem in self._get_elements():
-                a, kw = self._substitute(args, kwargs, elem)
-                f(*a, **kw)
+            a, kw = self._substitute(args, kwargs, elem)
+            return f, a, kw
         elif len(args) == 1:
             # only args maybe an underscore class or simple value
             v = args[0]
-            for elem in self._get_elements():
-                f(elem) if self._is_underscore(v) else f(elem, v)
+            return (f, (elem,), {}) if self._is_underscore(v) else (f, (elem, v), {})
         else:
             # no args provided
             # basically 2 cases
-            for elem in self._get_elements():
-                if isinstance(f, Underscore):
-                    if f.arity == 1:
-                        # lambda applying on elem
-                        f.apply_f(elem)(*f.args, **f.kwargs)
-                    else:
-                        # retrieving args and kwargs passed
-                        if f.args or f.kwargs:
-                            a, kw = self._substitute(f.args, f.kwargs, elem)
-                            f.apply_f(*a, **kw)
+            if isinstance(f, Underscore):
+                if f.arity == 1:
+                    # lambda applying on elem
+                    return f.apply_f(elem), f.args, f.kwargs
                 else:
-                    # no argument supplied, simplest case
-                    # apply to f to element
-                    f(elem)
+                    # retrieving args and kwargs passed
+                    # if f.args or f.kwargs:
+                    a, kw = self._substitute(f.args, f.kwargs, elem)
+                    return f.apply_f, a, kw
+            else:
+                # no argument supplied, simplest case
+                # apply to f to element
+                return f, (elem,), {}
+
+    def for_each(self, f, *args, **kwargs):
+        for elem in self._get_elements():
+            f_, a, kw = self._get_f(elem, f, *args, **kwargs)
+            f_(*a, **kw)
 
     def filter(self, f, *args, **kwargs):
-        return Seq([elem for elem in self.sequence if f(elem, *args, **kwargs)])
+        def gen():
+            for elem in self._get_elements():
+                f_, a, kw = self._get_f(elem, f, *args, **kwargs)
+                if f_(*a, **kw):
+                    yield elem
+        return Seq(gen())
 
     def map(self, f, *args, **kwargs):
-        if isinstance(f, Underscore):
-            f = f.f
-        return Seq((f(elem, *args, **kwargs) for elem in self.sequence))
+        def gen():
+            for elem in self._get_elements():
+                f_, a, kw = self._get_f(elem, f, *args, **kwargs)
+                yield f_(*a, **kw)
+        return Seq(gen())
 
     def stream(self):
         if isinstance(self.sequence, types.GeneratorType):
@@ -85,7 +111,11 @@ class Seq(object):
         return Seq((elem for elem in self.sequence))
 
     def to_list(self):
-        return list(self.sequence)
+        return list(self._get_elements())
+
+    def to_dict(self):
+        #  sa = [self._get_elements()]
+        return dict(self._get_elements())
 
 
 def seq(*args):

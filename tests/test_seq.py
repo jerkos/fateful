@@ -2,7 +2,7 @@ import unittest
 import types
 
 from seito.seq import seq
-from seito.underscore import underscore as _, seito_rdy
+from seito.underscore import underscore as _, seito_rdy, identity, id_
 
 
 class A(object):
@@ -83,7 +83,12 @@ class Test(unittest.TestCase):
     def test_dict(self):
         def print_x_y(x, y):
             print(x, y)
+
         print_x_y = seito_rdy(print_x_y)
 
         seq({1: 2, 3: 4}).for_each(print_x_y(_._1, _._2))
         seq({1: A(2), 3: A(4)}).for_each(_._2.get_x())
+
+    def test_dict_to_dict(self):
+        a = seq({1: 2, 3: 4}).map(_((_._1, _._2))).to_dict()
+        print(a)
