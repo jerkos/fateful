@@ -34,29 +34,42 @@ class Underscore(object):
 
     def __call__(self, *args, **kwargs):
         return Underscore(self.f, args, kwargs, self.arity)
-        # return self.f, args, kwargs, self.arity #lambda *ag, **kw: self.f(*args, **kwargs)
 
     def __add__(self, other):
-        print(self.f)
-        return Underscore(lambda x: self.f(x)(*self.args, **self.kwargs) + other, arity=1)
-        #return Underscore(lambda x, *ag, **kw: self.f(x, *ag, **kw) + other, (other,), {})
+        return Underscore(
+            lambda x: self.f(x)(*self.args, **self.kwargs)
+            if callable(self.f(x)) else self.f(x) + other, arity=1, is_endpoint=True
+        )
 
     def __sub__(self, other):
-        return Underscore(lambda x, *ag, **kw: self.f(x, *ag, **kw) - other)
+        return Underscore(
+            lambda x: self.f(x)(*self.args, **self.kwargs)
+            if callable(self.f(x)) else self.f(x) - other, arity=1, is_endpoint=True
+        )
 
     def __mul__(self, other):
-        return Underscore(lambda x, *ag, **kw: self.f(x, *ag, **kw) * other)
+        return Underscore(
+            lambda x: self.f(x)(*self.args, **self.kwargs)
+            if callable(self.f(x)) else self.f(x) * other, arity=1, is_endpoint=True
+        )
 
     def __floordiv__(self, other):
-        return Underscore(lambda x, *ag, **kw: self.f(x, *ag, **kw) // other)
+        return Underscore(
+            lambda x: self.f(x)(*self.args, **self.kwargs)
+            if callable(self.f(x)) else self.f(x) // other, arity=1, is_endpoint=True
+        )
 
     def __truediv__(self, other):
-        return Underscore(lambda x, *ag, **kw: self.f(x, *ag, **kw) / other)
+        return Underscore(
+            lambda x: self.f(x)(*self.args, **self.kwargs)
+            if callable(self.f(x)) else self.f(x) / other, arity=1, is_endpoint=True
+        )
 
     def __pow__(self, power, modulo=None):
-        return Underscore(lambda x, *ag, **kw: self.f(x, *ag, **kw) ** power)
+        return Underscore(
+            lambda x: self.f(x)(*self.args, **self.kwargs)
+            if callable(self.f(x)) else self.f(x) ** power, arity=1, is_endpoint=True
+        )
 
 
 underscore = Underscore()
-
-id_ = seito_rdy(identity)

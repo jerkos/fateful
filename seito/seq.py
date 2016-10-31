@@ -110,6 +110,7 @@ class Seq(object):
                 if callable(f_):
                     yield f_(*a, **kw)
                 else:
+                    print(f_)
                     yield f_
         return Seq(gen())
 

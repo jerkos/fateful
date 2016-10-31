@@ -92,3 +92,10 @@ class Test(unittest.TestCase):
     def test_dict_to_dict(self):
         a = seq({1: 2, 3: 4}).map(_((_._1, _._2))).to_dict()
         print(a)
+
+    def test_complex(self):
+        # a = seq(A(1), A(2), A(3)).stream().map(_.get_x() + 4).to_list()
+        # print(a)
+
+        a = seq(1, 2, 3).stream().map(_ + 4).to_list()
+        print(a)
