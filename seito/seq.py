@@ -88,21 +88,29 @@ class Seq(object):
     def for_each(self, f, *args, **kwargs):
         for elem in self._get_elements():
             f_, a, kw = self._get_f(elem, f, *args, **kwargs)
-            f_(*a, **kw)
+            if callable(f_):
+                f_(*a, **kw)
 
     def filter(self, f, *args, **kwargs):
         def gen():
             for elem in self._get_elements():
                 f_, a, kw = self._get_f(elem, f, *args, **kwargs)
-                if f_(*a, **kw):
-                    yield elem
+                if callable(f_):
+                    if f_(*a, **kw):
+                        yield elem
+                else:
+                    if f_:
+                        yield elem
         return Seq(gen())
 
     def map(self, f, *args, **kwargs):
         def gen():
             for elem in self._get_elements():
                 f_, a, kw = self._get_f(elem, f, *args, **kwargs)
-                yield f_(*a, **kw)
+                if callable(f_):
+                    yield f_(*a, **kw)
+                else:
+                    yield f_
         return Seq(gen())
 
     def stream(self):
@@ -114,7 +122,6 @@ class Seq(object):
         return list(self._get_elements())
 
     def to_dict(self):
-        #  sa = [self._get_elements()]
         return dict(self._get_elements())
 
 

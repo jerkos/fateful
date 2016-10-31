@@ -37,7 +37,9 @@ class Underscore(object):
         # return self.f, args, kwargs, self.arity #lambda *ag, **kw: self.f(*args, **kwargs)
 
     def __add__(self, other):
-        return Underscore(lambda x, *ag, **kw: self.f(x, *ag, **kw) + other)
+        print(self.f)
+        return Underscore(lambda x: self.f(x)(*self.args, **self.kwargs) + other, arity=1)
+        #return Underscore(lambda x, *ag, **kw: self.f(x, *ag, **kw) + other, (other,), {})
 
     def __sub__(self, other):
         return Underscore(lambda x, *ag, **kw: self.f(x, *ag, **kw) - other)

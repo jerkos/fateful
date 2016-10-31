@@ -2,7 +2,7 @@ import unittest
 import types
 
 from seito.seq import seq
-from seito.underscore import underscore as _, seito_rdy, identity, id_
+from seito.underscore import underscore as _, seito_rdy
 
 
 class A(object):
