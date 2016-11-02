@@ -9,9 +9,15 @@ class A(object):
     def __init__(self, x):
         self.x = x
 
+    def get_new_a(self, z):
+        return A(z)
+
     def get_x(self):
-        print(self.x)
+        # print(self.x)
         return self.x
+
+    def get_z(self, z):
+        return A(self.x + z)
 
     def power(self, p):
         print(self.x ** p)
@@ -87,15 +93,25 @@ class Test(unittest.TestCase):
         print_x_y = seito_rdy(print_x_y)
 
         seq({1: 2, 3: 4}).for_each(print_x_y(_._1, _._2))
-        seq({1: A(2), 3: A(4)}).for_each(_._2.get_x())
+        self.assertEqual(seq({1: A(2), 3: A(4)}).map(_._2.get_x() + 2).to_list(), [4, 6])
+        self.assertEqual(seq({1: A(2), 3: A(4)}).map((_._2.get_x() + 2) ** 2).to_list(), [16, 36])
 
     def test_dict_to_dict(self):
         a = seq({1: 2, 3: 4}).map(_((_._1, _._2))).to_dict()
-        print(a)
+        self.assertEqual(a, {1: 2, 3: 4})
 
     def test_complex(self):
-        # a = seq(A(1), A(2), A(3)).stream().map(_.get_x() + 4).to_list()
-        # print(a)
+        self.assertEqual(seq(A(1), A(2), A(3)).stream().map(_.get_x() + 4).to_list(), [5, 6, 7])
+        self.assertEqual(seq(1, 2, 3).stream().map(_ + 4).to_list(), [5, 6, 7])
 
-        a = seq(1, 2, 3).stream().map(_ + 4).to_list()
-        print(a)
+    def test_chaining_underscore(self):
+        def new_a(a):
+            return A(a)
+
+        new_a_seito = seito_rdy(new_a)
+        self.assertEqual(seq(A(1), A(2), A(3), A(4)).stream().map(_.get_new_a(4).get_z(4).get_x()).to_list(),
+                         [8, 8, 8, 8])
+
+    def test_plus(self):
+        a = seq(A(1), A(2), A(3)).stream().map(_.get_x() + A(2).get_x()).to_list()
+        self.assertEqual(a, [3, 4, 5])

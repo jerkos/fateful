@@ -23,7 +23,7 @@ class Seq(object):
     @staticmethod
     def _substitute(args, kwargs, elem):
         def is_underscore_and_endpoint(x):
-            return Seq._is_underscore(x) and x.is_endpoint
+            return Seq._is_underscore(x) # and x.is_endpoint
         sa = []
         skw = {}
 
