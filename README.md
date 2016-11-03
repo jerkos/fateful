@@ -1,6 +1,8 @@
 # seito
 functional python (for learning)
 
+[![Build Status](https://travis-ci.org/jerkos/seito.svg?branch=master)](https://travis-ci.org/jerkos/seito) [![codecov](https://codecov.io/gh/jerkos/seito/branch/master/graph/badge.svg)](https://codecov.io/gh/jerkos/seito)
+
 Python has some great functional features. The most notable ones are
 comprehensions. However, when you start to chain function calls (or predicate
  or whatever), it becomes rapidly a pain to me.
