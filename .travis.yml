@@ -9,7 +9,6 @@ before_install:
 
 install:
   - pip install nose
-  - pip install .
   - pip install coverage
   - pip install codecov
 
