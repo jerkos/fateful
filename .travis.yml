@@ -1,0 +1,20 @@
+language: python
+
+python:
+  - "3.5"
+# command to install dependencies
+
+before_install:
+  - sudo apt-get update
+
+install:
+  - pip install nose
+  - pip install .
+  - pip install coverage
+  - pip install codecov
+
+script:
+  - nosetests --with-coverage
+
+after_success:
+  - codecov

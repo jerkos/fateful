@@ -105,10 +105,6 @@ class Test(unittest.TestCase):
         self.assertEqual(seq(1, 2, 3).stream().map(_ + 4).to_list(), [5, 6, 7])
 
     def test_chaining_underscore(self):
-        def new_a(a):
-            return A(a)
-
-        new_a_seito = seito_rdy(new_a)
         self.assertEqual(seq(A(1), A(2), A(3), A(4)).stream().map(_.get_new_a(4).get_z(4).get_x()).to_list(),
                          [8, 8, 8, 8])
 
