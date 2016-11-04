@@ -1,5 +1,6 @@
 import unittest
 import types
+import time
 
 from seito.seq import seq
 from seito.underscore import underscore as _, seito_rdy
@@ -111,3 +112,26 @@ class Test(unittest.TestCase):
     def test_plus(self):
         a = seq(A(1), A(2), A(3)).stream().map(_.get_x() + A(2).get_x()).to_list()
         self.assertEqual(a, [3, 4, 5])
+
+    def test_sort_by(self):
+        a = seq(3, 2, 1).stream().sort().to_list()
+        self.assertEqual(a, [1, 2, 3])
+        b = seq(A(3), A(2), A(1)).stream().sort_by(_.get_x()).map(_.get_x()).to_list()
+        self.assertEqual(b, [1, 2, 3])
+
+    def test_bench(self):
+        a = time.clock()
+        for i in range(10000):
+            seq(range(1000, 1, -1)).sort()
+        c = time.clock() - a
+        print('time elapsed seq: ' + str(c))
+        b = time.clock()
+        for i in range(10000):
+            sorted(range(1000, 1, -1))
+        d = time.clock() - b
+        print('time elapsed builtins: ' + str(d))
+        print('diff :' + str(max(c, d) / min(c, d)))
+
+    def test_sort_by_bis(self):
+        a = seq(A(3), A(2), A(1)).sort_by(_.get_x()).map(_.get_x()).to_list()
+        print(a)

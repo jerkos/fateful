@@ -1,6 +1,8 @@
 import json
+import collections
 
 from seito.option import none, option, Option
+from seito.seq import Seq
 
 
 def obj(*args):
@@ -20,12 +22,16 @@ class JsObject(dict):
 
     def __getitem__(self, item: str) -> Option:
         try:
-            return option(super(JsObject, self).__getitem__(item))
+            v = super(JsObject, self).__getitem__(item)
+            if isinstance(v, collections.Iterable):
+                return Seq(v)
+            return option(v)
         except KeyError:
             return none
 
     def __getattr__(self, item: str) -> Option:
         try:
+            # call get item
             return self[item]
         except KeyError:
             return none

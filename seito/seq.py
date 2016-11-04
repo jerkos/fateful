@@ -5,16 +5,21 @@ from seito.underscore import Underscore
 
 
 class Seq(object):
-    def __init__(self, iterable):
+    def __init__(self, iterable, to_stream=False):
         if not isinstance(iterable, collections.Iterable):
             raise TypeError('seq constructor argument must be an iterable')
-        self.sequence = iterable
-        self._is_mapping_type = isinstance(iterable, collections.Mapping)
+        self.sequence = iterable if not isinstance(iterable, collections.Mapping) \
+            else iterable.items()
+        self.to_stream = to_stream
+        self.is_gen = isinstance(self.sequence, types.GeneratorType)
 
-    def _get_elements(self):
-        if self._is_mapping_type:
-            return self.sequence.items()
-        return self.sequence
+    @staticmethod
+    def _ensure_callable(f, a, kw):
+        return f(*a, **kw) if callable(f) else f
+
+    @staticmethod
+    def _ensure_list(elements):
+        return elements if isinstance(elements, list) else list(elements)
 
     @staticmethod
     def _is_underscore(x):
@@ -86,44 +91,49 @@ class Seq(object):
                 return f, (elem,), {}
 
     def for_each(self, f, *args, **kwargs):
-        for elem in self._get_elements():
+        for elem in self.sequence:
             f_, a, kw = self._get_f(elem, f, *args, **kwargs)
-            if callable(f_):
-                f_(*a, **kw)
+            self._ensure_callable(f_, a, kw)
 
     def filter(self, f, *args, **kwargs):
         def gen():
-            for elem in self._get_elements():
+            for elem in self.sequence:
                 f_, a, kw = self._get_f(elem, f, *args, **kwargs)
-                if callable(f_):
-                    if f_(*a, **kw):
-                        yield elem
-                else:
-                    if f_:
-                        yield elem
+                if self._ensure_callable(f_, a, kw):
+                    yield elem
         return Seq(gen())
 
     def map(self, f, *args, **kwargs):
         def gen():
-            for elem in self._get_elements():
+            for elem in self.sequence:
                 f_, a, kw = self._get_f(elem, f, *args, **kwargs)
-                if callable(f_):
-                    yield f_(*a, **kw)
-                else:
-                    print(f_)
-                    yield f_
+                yield self._ensure_callable(f_, a, kw)
         return Seq(gen())
 
+    def sort(self):
+        v = self._ensure_list(self.sequence)
+        v.sort()
+        return Seq(v)
+
+    def sort_by(self, f, *args, **kwargs):
+        v = self._ensure_list(self.sequence)
+        v.sort(key=lambda x: f.f(x)(*args, **kwargs) if isinstance(f, Underscore) else f)
+        return Seq(v)
+
+    def first_opt(self):
+        pass
+
     def stream(self):
-        if isinstance(self.sequence, types.GeneratorType):
-            return self.sequence
-        return Seq((elem for elem in self.sequence))
+        return self.sequence if self._gen else Seq(elem for elem in self.sequence)
 
     def to_list(self):
-        return list(self._get_elements())
+        return self._ensure_list(self.sequence)
 
     def to_dict(self):
-        return dict(self._get_elements())
+        return dict(self.sequence)
+
+    def to_set(self):
+        return set(self.sequence)
 
 
 def seq(*args):
