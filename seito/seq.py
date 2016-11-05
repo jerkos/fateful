@@ -1,6 +1,8 @@
 import collections
 import types
 
+from seito import none
+from seito import option
 from seito.underscore import Underscore
 
 
@@ -121,10 +123,13 @@ class Seq(object):
         return Seq(v)
 
     def first_opt(self):
-        pass
+        try:
+            return option(next(self.sequence) if self.is_gen else self.sequence[0])
+        except (StopIteration, IndexError):
+            return none
 
     def stream(self):
-        return self.sequence if self._gen else Seq(elem for elem in self.sequence)
+        return self.sequence if self.is_gen else Seq(elem for elem in self.sequence)
 
     def to_list(self):
         return self._ensure_list(self.sequence)

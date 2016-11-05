@@ -75,5 +75,16 @@ class Underscore(object):
             if callable(self.f(x)) else self.f(x) ** power, arity=1
         )
 
+    def __gt__(self, other):
+        return Underscore(
+            lambda x: self.f(x)(*self.args, **self.kwargs) > other
+            if callable(self.f(x)) else self.f(x) > other, arity=1
+        )
+
+    def __lt__(self, other):
+        return Underscore(
+            lambda x: self.f(x)(*self.args, **self.kwargs) < other
+            if callable(self.f(x)) else self.f(x) < other, arity=1
+        )
 
 underscore = Underscore()

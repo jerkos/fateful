@@ -24,7 +24,7 @@ class JsObject(dict):
         try:
             v = super(JsObject, self).__getitem__(item)
             if isinstance(v, collections.Iterable):
-                return Seq(v)
+                return option(Seq(v))
             return option(v)
         except KeyError:
             return none

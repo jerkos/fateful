@@ -134,4 +134,14 @@ class Test(unittest.TestCase):
 
     def test_sort_by_bis(self):
         a = seq(A(3), A(2), A(1)).sort_by(_.get_x()).map(_.get_x()).to_list()
-        print(a)
+        self.assertEqual(a, [1, 2, 3])
+
+    def test_filter(self):
+        a = seq(A(3), A(2), A(1)).filter(_.get_x() < 2).map(_.get_x()).to_list()
+        self.assertEqual(a, [1])
+
+    def test_first_opt(self):
+        a = seq(A(3), A(2), A(1)).filter(_.get_x() < 1).first_opt().or_else([1, 2, 3])
+        self.assertEqual(a, [1, 2, 3])
+        a = seq(A(3), A(2), A(1)).filter(_.get_x() < 3).first_opt().map(lambda x: x.get_x()).or_else(0)
+        self.assertEqual(a, 2)
