@@ -31,12 +31,16 @@ class Test(unittest.TestCase):
         self.assertEqual(seq([1, 2, 3]).to_list(), [1, 2, 3])
 
         a = [1, 2, 3]
-        self.assertIsInstance(seq((i for i in a)).sequence, types.GeneratorType)
-        self.assertEqual(seq((i for i in a)).to_list(), [1, 2, 3])
+        self.assertIsInstance(seq(i for i in a).sequence, types.GeneratorType)
+        self.assertEqual(seq(i for i in a).to_list(), [1, 2, 3])
 
     def test_stream(self):
         print(seq(1, 2, 3).stream().sequence)
         self.assertIsInstance(seq(1, 2, 3).stream().sequence, types.GeneratorType)
+        print(seq(1, 2, 3).sequence)
+        self.assertIsInstance(seq(1, 2, 3).sequence, list)
+
+        self.assertIsInstance(seq(1, 2, 3).map(_ * 3).sequence, list)
 
     def test_for_each(self):
         seq(1, 2, 3).stream().for_each(lambda x: print(x))
@@ -132,6 +136,13 @@ class Test(unittest.TestCase):
         print('time elapsed builtins: ' + str(d))
         print('diff :' + str(max(c, d) / min(c, d)))
 
+    def test_bench_map(self):
+        a = time.clock()
+        for i in range(100):
+            seq(list(range(1000, 1, -1))).map(_ + 1)
+        c = time.clock() - a
+        print('time elapsed seq: ' + str(c))
+
     def test_sort_by_bis(self):
         a = seq(A(3), A(2), A(1)).sort_by(_.get_x()).map(_.get_x()).to_list()
         self.assertEqual(a, [1, 2, 3])
@@ -143,5 +154,5 @@ class Test(unittest.TestCase):
     def test_first_opt(self):
         a = seq(A(3), A(2), A(1)).filter(_.get_x() < 1).first_opt().or_else([1, 2, 3])
         self.assertEqual(a, [1, 2, 3])
-        a = seq(A(3), A(2), A(1)).filter(_.get_x() < 3).first_opt().map(lambda x: x.get_x()).or_else(0)
+        a = seq(A(3), A(2), A(1)).filter(_.get_x() < 3).first_opt().map(_.get_x()).or_else(0)
         self.assertEqual(a, 2)

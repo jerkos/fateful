@@ -1,4 +1,7 @@
-class Option(object):
+from seito.utils import UHandlerMixin
+
+
+class Option(UHandlerMixin):
     def __init__(self, obj, *args, **kwargs):
         self.__under = self.__get_val(obj, *args, **kwargs)
         self.is_some = self.__under is not None
@@ -27,7 +30,9 @@ class Option(object):
 
     def map(self, func, *args, **kwargs) -> 'Option':
         if self.is_some:
-            return option(func(self.__under, *args, **kwargs))
+            return option(self.translate_and_call(
+                self.__under, func, *args, **kwargs)
+            )
         return self
 
     def __iter__(self):
@@ -69,6 +74,7 @@ class Option(object):
 
 def option(value):
     return Option(value)
+
 
 # aliases
 opt = option

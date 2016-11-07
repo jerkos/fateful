@@ -3,7 +3,13 @@ import unittest
 from seito.option import option, none, opt
 
 
+class A(object):
+    def __init__(self, x):
+        self.x = x
+
+
 class Test(unittest.TestCase):
+
     def test_option_none_get(self):
         with self.assertRaises(ValueError):
             r = none.get()
@@ -43,6 +49,8 @@ class Test(unittest.TestCase):
         self.assertEqual(option('TOTO').capitalizes().or_else('t'), 't')
         self.assertEqual(option('toto').capitalize().or_else('failed'), 'Toto')
         self.assertEqual(option('riri').count('ri').get(), 2)
+        self.assertEqual(option(A(5)).x.get(), 5)
+        self.assertEqual(option(A(5)).z.or_else(0), 0)
 
     def test_nested_option(self):
         nested_none = option(option(option('tata')))
