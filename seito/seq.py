@@ -33,6 +33,15 @@ class Seq(UHandlerMixin):
         return Seq([self.translate_and_call(elem, f, *args, **kwargs)
                     for elem in self.sequence])
 
+    def reduce(self, f):
+        v = next(self.sequence) if self.is_gen else self.sequence[0]
+        for next_val in self.sequence if self.is_gen else self.sequence[1:]:
+            if callable(v) and callable(next_val):
+                v = (Underscore(f) << Underscore(next_val)).f  # f(next_val(x))
+            else:
+                v = f(v, next_val)
+        return v
+
     def sort(self):
         v = self.ensure_class(self.sequence, list)
         v.sort()
@@ -66,3 +75,12 @@ def seq(*args):
     if len(args) == 1 and isinstance(args[0], collections.Iterable):
         return Seq(args[0])
     return Seq(list(args))
+
+
+def func_boolean(v):
+    if v:
+        return True
+    return False
+
+FUNC_BOOLEAN = func_boolean
+

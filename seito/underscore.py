@@ -4,10 +4,6 @@ import operator
 def identity(x): return x
 
 
-def seito_rdy(f):
-    return Underscore(lambda *a, **kw: f(*a, **kw))
-
-
 class Underscore(object):
     def __init__(self, f=identity, args=None, kwargs=None, arity=0, compose=None):
         self.f = f
@@ -86,5 +82,17 @@ class Underscore(object):
             lambda x: self.f(x)(*self.args, **self.kwargs) < other
             if callable(self.f(x)) else self.f(x) < other, arity=1
         )
+
+    def lift(self, func):
+        return lambda *args, **kwargs: func(self.f, *args, **kwargs)
+
+    def __lshift__(self, other):
+        return Underscore(lambda *args, **kwargs: self.f(other(*args, **kwargs)))
+
+
+def seito_rdy(f):
+    return Underscore(lambda *a, **kw: f(*a, **kw))
+
+F = seito_rdy
 
 underscore = Underscore()

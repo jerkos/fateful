@@ -72,8 +72,8 @@ class Option(UHandlerMixin):
         return obj
 
 
-def option(value):
-    return Option(value)
+def option(value, *args, **kwargs):
+    return Option(value, *args, **kwargs)
 
 
 # aliases

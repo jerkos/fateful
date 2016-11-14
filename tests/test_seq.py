@@ -1,8 +1,9 @@
 import unittest
 import types
 import time
+import operator
 
-from seito.seq import seq
+from seito.seq import seq, FUNC_BOOLEAN
 from seito.underscore import underscore as _, seito_rdy
 
 
@@ -156,3 +157,12 @@ class Test(unittest.TestCase):
         self.assertEqual(a, [1, 2, 3])
         a = seq(A(3), A(2), A(1)).filter(_.get_x() < 3).first_opt().map(_.get_x()).or_else(0)
         self.assertEqual(a, 2)
+
+    def test_func_composition(self):
+        f1 = lambda x: x > 5
+        f2 = lambda x: x == 6
+
+        print(seq(1, 2, 3).stream().reduce(operator.add))
+
+        f = seq(f1, f2).reduce(FUNC_BOOLEAN)
+        print(f(6))

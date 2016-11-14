@@ -84,3 +84,4 @@ class UHandlerMixin(object):
     @staticmethod
     def translate_and_call(elem, f, *args, **kwargs):
         return UHandlerMixin.ensure_callable(*UHandlerMixin.get_f(elem, f, *args, **kwargs))
+
