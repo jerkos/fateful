@@ -3,7 +3,7 @@ import types
 import time
 import operator
 
-from seito.seq import seq, FUNC_BOOLEAN
+from seito.seq import seq, AND_BOOLEAN, OR_BOOLEAN
 from seito.underscore import underscore as _, seito_rdy
 
 
@@ -160,9 +160,9 @@ class Test(unittest.TestCase):
 
     def test_func_composition(self):
         f1 = lambda x: x > 5
-        f2 = lambda x: x == 6
+        f2 = lambda x: x > 8
 
         print(seq(1, 2, 3).stream().reduce(operator.add))
 
-        f = seq(f1, f2).reduce(FUNC_BOOLEAN)
+        f = seq(f1, f2).reduce(OR_BOOLEAN)
         print(f(6))

@@ -37,7 +37,8 @@ class Seq(UHandlerMixin):
         v = next(self.sequence) if self.is_gen else self.sequence[0]
         for next_val in self.sequence if self.is_gen else self.sequence[1:]:
             if callable(v) and callable(next_val):
-                v = (Underscore(f) << Underscore(next_val)).f  # f(next_val(x))
+                v = f(v, next_val)
+                # v = (Underscore(f) << Underscore(next_val)).f  # f(next_val(x))
             else:
                 v = f(v, next_val)
         return v
@@ -77,10 +78,12 @@ def seq(*args):
     return Seq(list(args))
 
 
-def func_boolean(v):
-    if v:
-        return True
-    return False
+def func_and_boolean(f1, f2):
+    return lambda x: f1(x) and f2(x)
 
-FUNC_BOOLEAN = func_boolean
 
+def func_or_boolean(f1, f2):
+    return lambda x: f1(x) or f2(x)
+
+AND_BOOLEAN = func_and_boolean
+OR_BOOLEAN = func_or_boolean
