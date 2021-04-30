@@ -33,12 +33,18 @@ class Underscore(object):
 
     def __call__(self, *args, **kwargs):
         func = lambda x: self.f(x)(*args, **kwargs)
-        return Underscore(self.f, args=args, kwargs=kwargs, arity=self.arity, compose=(func, args, kwargs))
+        return Underscore(lambda: self.f(*args, **kwargs), args=args, kwargs=kwargs, arity=self.arity) # compose=(func, args, kwargs))
+        # return Underscore(self.f, args=args, kwargs=kwargs, arity=self.arity, compose=(func, args, kwargs))
 
     def __add__(self, other):
+        func = (lambda x: self.f(x)(*self.args, **self.kwargs) + other
+            if callable(self.f(x)) else self.f(x) + other)
+        
+        if isinstance(other, Underscore):
+            print('hello')
+            func = lambda x: self.f(x)(*self.args, **self.kwargs) + other.f(x)(*self.args, **self.kwargs)
         return Underscore(
-            lambda x: self.f(x)(*self.args, **self.kwargs) + other
-            if callable(self.f(x)) else self.f(x) + other, arity=1
+            func, arity=1
         )
 
     def __sub__(self, other):
@@ -83,11 +89,16 @@ class Underscore(object):
             if callable(self.f(x)) else self.f(x) < other, arity=1
         )
 
-    def lift(self, func):
-        return lambda *args, **kwargs: func(self.f, *args, **kwargs)
-
     def __lshift__(self, other):
         return Underscore(lambda *args, **kwargs: self.f(other(*args, **kwargs)))
+
+    
+    def lift(self, func):
+        value = Underscore(lambda *args, **kwargs: func(self.f(*args, **kwargs)))
+        return value
+        
+    def end(self):
+      return self.f
 
 
 def seito_rdy(f):

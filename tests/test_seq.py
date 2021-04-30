@@ -125,23 +125,23 @@ class Test(unittest.TestCase):
         self.assertEqual(b, [1, 2, 3])
 
     def test_bench(self):
-        a = time.clock()
+        a = time.process_time()
         for i in range(10000):
             seq(range(1000, 1, -1)).sort()
-        c = time.clock() - a
+        c = time.process_time() - a
         print('time elapsed seq: ' + str(c))
-        b = time.clock()
+        b = time.process_time()
         for i in range(10000):
             sorted(range(1000, 1, -1))
-        d = time.clock() - b
+        d = time.process_time() - b
         print('time elapsed builtins: ' + str(d))
         print('diff :' + str(max(c, d) / min(c, d)))
 
     def test_bench_map(self):
-        a = time.clock()
+        a = time.process_time()
         for i in range(100):
             seq(list(range(1000, 1, -1))).map(_ + 1)
-        c = time.clock() - a
+        c = time.process_time() - a
         print('time elapsed seq: ' + str(c))
 
     def test_sort_by_bis(self):
@@ -157,6 +157,11 @@ class Test(unittest.TestCase):
         self.assertEqual(a, [1, 2, 3])
         a = seq(A(3), A(2), A(1)).filter(_.get_x() < 3).first_opt().map(_.get_x()).or_else(0)
         self.assertEqual(a, 2)
+
+    def test_multiple(self):
+        a = seq(A(3), A(2), A(1)).map(_.get_x() + _.get_x()).to_list()
+        print(a)
+        self.assertEqual(a, [6, 4, 2])
 
     def test_func_composition(self):
         f1 = lambda x: x > 5

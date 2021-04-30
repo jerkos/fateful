@@ -1,41 +1,41 @@
-class Maybe(object):
-    def __init__(self, v):
-        self._is_success = False if isinstance(v, Exception) else True
-        self.value = v
+from dataclasses import dataclass, field
+from .option import opt, none
+from .underscore import Underscore
+from typing import Callable, List
+@dataclass
+class Try:
+  f: Callable
+  as_opt: bool = True
+  cb: Callable = None
+  errors: List[Exception] = field(default_factory=list)
 
-    @property
-    def is_success(self):
-        return self._is_success
-
-    def is_failure(self):
-        return not self.is_success
-
-    def get(self):
-        if self.is_success:
-            return self.value
-        raise self.value
-
-    def or_else(self, value):
-        if self.is_success:
-            return self.value
-        return value
-
-    def as_failure(self):
-        if not self._is_success:
-            yield self.value
-
-    def __repr__(self):
-        if self.is_success:
-            return 'Success({0})'.format(repr(self.value))
-        return 'Failure({0})'.format(repr(self.value))
-
-
-def _try(f, *args, **kwargs):
+  def on_error(self, *errors, cb=lambda: None):
+    if not all(issubclass(e, Exception) for e in errors):
+      raise ValueError('Error')
+    self.cb = cb
+    self.errors = errors
+    return self
+  
+  def __call__(self, *args, **kwargs):
+    errors = tuple(self.errors) or Exception
     try:
-        if callable(f):
-            return Maybe(f(*args, **kwargs))
-        return Maybe(f)
-    except Exception as e:
-        return Maybe(e)
+      value = self.f.apply_f(*args, **kwargs) if isinstance(self.f, Underscore) else self.f(*args, **kwargs)
+      return opt(value) if self.as_opt else value
+    except errors as e:
+      if self.as_opt:
+        return none
+      if self.cb:
+        return self.cb(e)
 
+def attempt(f):
+  return Try(f)
 
+def attempt_dec(errors=(Exception,), as_opt=False):
+  def _(f):
+    try_ = Try(f=f, errors=errors, as_opt=as_opt)
+    def __(*args, **kwargs):
+      return try_(*args, **kwargs)
+    return __
+  return _
+  
+  

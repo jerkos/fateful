@@ -1,6 +1,7 @@
 import unittest
 
 from seito.option import option, none, opt
+from seito.underscore import underscore as _
 
 
 class A(object):
@@ -32,6 +33,7 @@ class Test(unittest.TestCase):
             option(none_value).map(lambda v: v + 1).get()
         self.assertEqual(option(none_value).map(lambda v: v + 1).or_else(2), 2)
         self.assertEqual(option(one_value).map(lambda v: v + 1).get(), 2)
+        self.assertEqual(option(one_value).map(_ + 1).get(), 2)
 
         uppercase = 'VALUE'
         self.assertEqual(option(uppercase).map(lambda value: value.lower()).or_else(''), 'value')
@@ -62,4 +64,10 @@ class Test(unittest.TestCase):
         self.assertEqual(len(op), 5)
         print(option('value').get_or('') is none)
 
-        self.assertEqual(option([]).or_if_false([1, 2, 3]), [1, 2, 3])
+        self.assertEqual(option([]).or_if_falsy([1, 2, 3]), [1, 2, 3])
+    
+    def test_flat_map(self):
+        nested_none = option(option(option('tata'))).flat_map(lambda v: v + 'titi').get()
+        print(nested_none)
+
+

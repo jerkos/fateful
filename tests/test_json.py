@@ -1,7 +1,11 @@
+from dataclasses import dataclass
 import unittest
 
-from seito.john import obj
+from seito.john import parse_as, obj, try_parse_as, try_parse_as_opt
 
+@dataclass
+class Toto:
+    a: str
 
 class Test(unittest.TestCase):
     def test_john_object(self):
@@ -16,4 +20,25 @@ class Test(unittest.TestCase):
         i = obj({'z-index': 1000})
         self.assertEqual(i.stringify(sort_keys=True),
                          '''{"z-index": 1000}''')
+
+    def test_parse_obj(self):
+      value = '''[
+        {"a": "toto"},
+        {"a": "titi"}
+      ]
+      '''
+
+      value = parse_as(value, response_class=Toto)
+      print(value)
+
+    def test_fail_parse(self):
+      value = '''[
+        {"a": "toto"},
+        {"a": "titi"}
+      
+      '''
+      res = try_parse_as(value, response_class=Toto)
+      print('value: ', value)
+
+      res = try_parse_as_opt(value, response_class=Toto)
 

@@ -9,9 +9,9 @@ from seito.underscore import Underscore
 
 class Seq(UHandlerMixin):
     def __init__(self, iterable):
-        if not isinstance(iterable, collections.Iterable):
+        if not isinstance(iterable, collections.abc.Iterable):
             raise TypeError('seq constructor argument must be an iterable')
-        self.sequence = iterable if not isinstance(iterable, collections.Mapping) \
+        self.sequence = iterable if not isinstance(iterable, collections.abc.Mapping) \
             else iterable.items()
         self.is_gen = isinstance(self.sequence, types.GeneratorType)
 
