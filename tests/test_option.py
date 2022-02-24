@@ -1,10 +1,9 @@
 import unittest
 
-from seito.option import option, none, opt
-from seito.underscore import underscore as _
+from seito.monad.opt import option, none, opt, EmptyError
+from fn import _
 
-
-class A(object):
+class A:
     def __init__(self, x):
         self.x = x
 
@@ -12,7 +11,7 @@ class A(object):
 class Test(unittest.TestCase):
 
     def test_option_none_get(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(EmptyError):
             r = none.get()
 
     def test_option_is_empty(self):
@@ -42,6 +41,7 @@ class Test(unittest.TestCase):
         value = 1
         for v in option(value):
             self.assertEqual(v, 1)
+        self.assertEqual(list(opt(None)), [])
 
     def test_option_forwarding(self):
         value = 'VALUE'
@@ -65,9 +65,7 @@ class Test(unittest.TestCase):
         print(option('value').get_or('') is none)
 
         self.assertEqual(option([]).or_if_falsy([1, 2, 3]), [1, 2, 3])
-    
+
     def test_flat_map(self):
         nested_none = option(option(option('tata'))).flat_map(lambda v: v + 'titi').get()
-        print(nested_none)
-
-
+        self.assertEqual(nested_none, "tatatiti")
