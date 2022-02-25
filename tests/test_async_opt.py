@@ -4,6 +4,8 @@ import pytest
 from assertpy import assert_that
 
 from seito.monad.async_opt import aopt
+from seito.monad.func import identity
+from seito.monad.opt import when, Some, _, default
 
 
 async def add_async(a, b):
@@ -14,6 +16,15 @@ async def add_async(a, b):
 async def async_none():
     await asyncio.sleep(0.1)
     return None
+
+
+async def async_raise():
+    await asyncio.sleep(0.1)
+    return 1 / 0
+
+async def async_identity(x):
+    await asyncio.sleep(0.1)
+    return x
 
 
 @pytest.mark.asyncio
@@ -36,7 +47,7 @@ async def test_async_opt():
     value = await aopt(async_none).map(lambda x: x * 2).map(lambda x: x / 2).or_else(1)
     assert_that(value).is_equal_to(1)
 
-    async for _ in aopt(async_none):
+    async for __ in aopt(async_none):
         ...
     else:
         value = "Not passed"
@@ -46,3 +57,23 @@ async def test_async_opt():
     async for val in aopt(add_async, 1, 2):
         value = val
     assert_that(value).is_equal_to(3)
+
+    value = await aopt(add_async, 1, 2).map(lambda x: x * 2).map(lambda x: x / 2).match(
+        when(Some(_)).then(identity),
+        default() >> 1
+    )
+    assert_that(value).is_equal_to(3)
+
+    assert_that(await aopt(add_async, 1, 2).is_empty()).is_false()
+
+    assert_that(await aopt(add_async, 1, 2).or_raise(ValueError())).is_equal_to(3)
+
+    str(aopt(add_async, 1, 2))
+
+    assert_that(await aopt(async_raise).or_else(1)).is_equal_to(1)
+
+    assert_that(await aopt(async_raise).or_none()).is_none()
+
+    assert_that(await aopt(async_raise)()).is_not_none()
+
+    assert_that(await aopt(async_identity, 1).map(lambda x: x / 0).or_else(1)).is_equal_to(1)

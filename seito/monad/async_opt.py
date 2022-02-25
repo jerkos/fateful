@@ -1,12 +1,22 @@
+import asyncio
 from asyncio import iscoroutinefunction
 from typing import Awaitable, Callable, Any
 
-from aflowey import aflow, partial, CANCEL_FLOW
-from aflowey.single_executor import _exec
+from aflowey import aflow, partial, CANCEL_FLOW, F
 from loguru import logger
 
-from seito.monad.opt import T, Option, identity, opt, When, Default
+from seito.monad.opt import T, Option, identity, opt, When, Default, Some, Empty, Err
 
+
+async def _exec(function, *a: Any, **kw: Any) -> Any:
+    current_result = function(*a, **kw)
+    while asyncio.iscoroutine(current_result):
+        current_result = await current_result
+    if isinstance(current_result, Option):
+        return current_result
+    if callable(current_result):
+        return await _exec(current_result)
+    return current_result
 
 def breaker_wrapper(f):
     async def w(*args, **kwargs):
@@ -26,16 +36,23 @@ class AsyncOption(Option):
         self._mappers = []
 
     async def _execute(self):
-        init_f = (
+        init_f = breaker_wrapper(
             partial(self._under, *self.args, **self.kwargs)
-            if callable(self._under)
-            else self._under
         )
         # currently, a bug exists in aflowey, have to check the return value
         # of the first call
-        value = await init_f()
+        try:
+            value = await init_f()
+        except Exception as e:
+            return e
+
         if value is CANCEL_FLOW or value is None:
             return value
+
+        # option can not be used in pipeline
+        if isinstance(value, Option):
+            return value
+
         flow = aflow.from_args(value) >> identity
         for (f, a, kw) in self._mappers:
             flow = flow >> breaker_wrapper(partial(f, *a, **kw))
@@ -122,10 +139,10 @@ class AsyncOption(Option):
         return f"<AsyncOption {self._under}>"
 
     def __iter__(self):
-        raise NotImplementedError()
+        raise NotImplementedError() # pragma: no cover
 
     def __getattr__(self, name: str) -> Any:
-        raise NotImplementedError()
+        raise NotImplementedError() # pragma: no cover
 
     async def match(self, *whens: When | Default):
         result = await self._execute()

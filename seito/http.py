@@ -2,8 +2,9 @@ from enum import Enum
 from typing import Type, Any
 
 from aiohttp import ClientSession
+from loguru import logger
 
-from seito.json import try_parse_as, try_parse
+from seito.json import try_parse
 from seito.monad.opt import Err, Some
 
 
@@ -41,7 +42,7 @@ async def request(
     /,
     *,
     session: ClientSession,
-    response_class: Type[Any] | None,
+    response_class: Type[Any] | None=None,
     **kwargs: Any,
 ) -> Some | Err[NetworkError]:
     try:
@@ -53,9 +54,10 @@ async def request(
                 return Err(HttpException(400, resp_as_text))
             if is_json:
                 if response_class is not None:
-                    return try_parse_as(resp_as_text)
+                    return try_parse(resp_as_text, response_class=response_class)
                 else:
                     return try_parse(resp_as_text)
             return Some(resp_as_text)
-    except:
+    except Exception as e:
+        logger.error(e)
         return Err(NetworkError())

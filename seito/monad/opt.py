@@ -41,9 +41,14 @@ class When:
 when = When
 
 
+@dataclass
 class Default:
-    def __init__(self, f):
-        self.action = f
+    def __init__(self):
+        self.action = None
+
+    def __rshift__(self, other) -> "Default":
+        self.action = other
+        return self
 
 
 default = Default
@@ -52,49 +57,52 @@ default = Default
 class Option(ABC):
     @abstractmethod
     def get(self) -> Any:
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def is_empty(self) -> bool:
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def or_else(self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any) -> Any:
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def or_if_falsy(
-        self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any
+            self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any
     ) -> Any:
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def or_none(self) -> Any:
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def or_raise(self, exc: Exception):
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def map(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> "Option":
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def __iter__(self):
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def __getattr__(self, name: str) -> Any:
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any):
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def __str__(self) -> str:
-        ...
+        ...  # pragma: no cover
+
+    def __rshift__(self, other) -> When:
+        return when(self).then(other)
 
     def match(self, *whens: When | Default):
         for w in whens:
@@ -105,11 +113,11 @@ class Option(ABC):
                     if not is_a_match:
                         continue
                     if extracted:
-                        return w.action(*extracted)
-                    return w.action()
+                        return apply(w.action, *extracted)
+                    return apply(w.action)
             else:
-                return w.action()
-        raise MatchError()
+                return apply(w.action)
+        raise MatchError(f"No default guard found, enable to match {self}")
 
 
 T = TypeVar("T")
@@ -130,7 +138,7 @@ class Some(Generic[T], Option):
         return self._under
 
     def or_if_falsy(
-        self, obj: Callable[..., Any], *args: Any, **kwargs: Any
+            self, obj: Callable[..., Any], *args: Any, **kwargs: Any
     ) -> T | Any:
         return self._under or apply(obj, *args, **kwargs)
 
@@ -141,7 +149,7 @@ class Some(Generic[T], Option):
         return self._under
 
     def map(
-        self, f: Callable[[T, ...], M], *args: Any, **kwargs: Any
+            self, f: Callable[[T, ...], M], *args: Any, **kwargs: Any
     ) -> "Some[M] | Empty":
         inst = self
         while isinstance(inst._under, Option):
@@ -163,7 +171,6 @@ class Some(Generic[T], Option):
         except AttributeError:
             return none
         if callable(attr):
-
             def wrapper(*args: Any, **kwargs: Any) -> "Some | Empty":
                 return opt(attr(*args, **kwargs))
 
@@ -247,6 +254,6 @@ def opt_from_call(f, *args, **kwargs):
 
 
 # aliases
-none = nope = Empty()
+none = nope = empty = Empty()
 opt = option
 err = Err

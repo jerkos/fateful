@@ -1,15 +1,13 @@
-from collections.abc import Iterable
-from typing import Any
+from typing import Any, List
 
 try:
     import orjson as json
 except ImportError:
     import json
-import collections
 from json.decoder import JSONDecodeError
 
 from seito.monad.opt import none, Some, Empty, opt
-from seito.monad.try_ import attempt_dec
+from seito.monad.try_ import attempt_to
 
 
 class JsObject(dict):
@@ -27,11 +25,7 @@ class JsObject(dict):
             return none
 
     def __getattr__(self, item: str) -> Some[Any] | Empty:
-        try:
-            # call get item
-            return opt(self[item])
-        except KeyError:
-            return none
+        return self[item]
 
     def __setattr__(self, key, value):
         self[key] = value
@@ -44,25 +38,18 @@ def js(*args, **kwargs):
     return JsObject(*args, **kwargs)
 
 
-def parse(string: str | bytes | bytearray, *args: Any, **kwargs: Any):
-    return JsObject(json.loads(string, *args, **kwargs))
-
-
-def parse_as(string: str | bytes | bytearray, /, *, response_class=None, **kwargs: Any):
-    if response_class is None:
-        return JsObject(json.loads(string, **kwargs))
+def parse(string: str | bytes | bytearray, *, response_class=None, **kwargs: Any):
     value = json.loads(string, **kwargs)
-    if isinstance(value, Iterable):
-        return [response_class(**subval) for subval in value]
-    return value
+    is_list = isinstance(value, List)
+    if response_class is None:
+        if is_list:
+            return [js(val) for val in value]
+        return js(value)
+    if is_list:
+        return [response_class(**val) for val in value]
+    return response_class(**value)
 
 
-tryify = lambda func, as_opt: attempt_dec(errors=(JSONDecodeError,), as_opt=as_opt)(
-    func
+try_parse = attempt_to(errors=(JSONDecodeError,))(
+    parse
 )
-
-try_parse = tryify(parse, False)
-try_parse_opt = tryify(parse, True)
-
-try_parse_as = tryify(parse_as, False)
-try_parse_as_opt = tryify(parse_as, True)

@@ -1,6 +1,7 @@
 import unittest
 
-from seito import attempt, attempt_dec
+from seito import attempt, attempt_to
+from seito.monad.opt import Some
 
 
 def error(x):
@@ -32,8 +33,12 @@ class Test(unittest.TestCase):
         print("value: ", value)
 
     def test_decorator(self):
-        @attempt_dec(errors=(ZeroDivisionError,), as_opt=False)
+        @attempt_to(errors=(ZeroDivisionError,))
         def test_error(x):
             return x / 1
 
         print("here: ,", test_error(1))
+
+    def test_fail(self):
+        with self.assertRaises(ValueError):
+            attempt(error).on_error(Some)

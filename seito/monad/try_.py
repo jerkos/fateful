@@ -10,7 +10,6 @@ T = TypeVar("T")
 @dataclass
 class Try:
     f: Callable[..., T]
-    as_opt: bool = True
     cb: Callable[[E], Any] = None
     errors: Tuple[E, ...] = field(default=(Exception,))
 
@@ -24,25 +23,21 @@ class Try:
     def __call__(self, *args, **kwargs) -> Some[T] | Empty | Any:
         try:
             value = self.f(*args, **kwargs)
-            return opt(value) if self.as_opt else value
+            return opt(value)
         except self.errors as e:
-            if self.as_opt:
-                return err(e)
             if self.cb:
                 return self.cb(e)
+            return err(e)
 
 
-def attempt(f):
-    return Try(f)
+def attempt(*args, **kwargs):
+    return Try(*args, **kwargs)
 
+try_ = attempt
 
-def try_(**kwargs):
-    return Try(**kwargs)
-
-
-def attempt_dec(errors=(Exception,), as_opt=False):
+def attempt_to(errors=(Exception,)):
     def wrapper(f):
-        try_ = Try(f=f, errors=errors, as_opt=as_opt)
+        try_ = Try(f=f, errors=errors)
 
         def inner(*args, **kwargs):
             return try_(*args, **kwargs)
