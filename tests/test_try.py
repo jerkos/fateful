@@ -20,15 +20,15 @@ class Test(unittest.TestCase):
         print("value: ", value)
 
     def test_opt(self):
-        value = attempt(lambda: error(1))().or_else('failure here')
+        value = attempt(lambda: error(1))().or_else("failure here")
         print("value: ", value)
-        value = attempt(lambda: success(1))().or_else('failure here')
+        value = attempt(lambda: success(1))().or_else("failure here")
         print("value: ", value)
 
     def test_through(self):
-        value = attempt(error)(1).or_else('failure here')
+        value = attempt(error)(1).or_else("failure here")
         print("value: ", value)
-        value = attempt(success)(1).or_else('failure here')
+        value = attempt(success)(1).or_else("failure here")
         print("value: ", value)
 
     def test_decorator(self):

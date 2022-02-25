@@ -16,7 +16,7 @@ class Try:
 
     def on_error(self, *errors: E, cb: Callable[[E], Any] = lambda: None):
         if not all(issubclass(e, Exception) for e in errors):
-            raise ValueError('Error')
+            raise ValueError("Error")
         self.cb = cb
         self.errors = errors or Exception
         return self

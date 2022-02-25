@@ -10,9 +10,11 @@ async def add_async(a, b):
     await asyncio.sleep(0.1)
     return a + b
 
+
 async def async_none():
     await asyncio.sleep(0.1)
     return None
+
 
 @pytest.mark.asyncio
 async def test_async_opt():
@@ -25,7 +27,7 @@ async def test_async_opt():
     value = await aopt(add_async, 0, 0).or_if_falsy(1)
     assert_that(value).is_equal_to(1)
 
-    value = await aopt(add_async, 1, 2).map(lambda x: x *2).get()
+    value = await aopt(add_async, 1, 2).map(lambda x: x * 2).get()
     assert_that(value).is_equal_to(6)
 
     value = await aopt(add_async, 1, 2).map(lambda x: x * 2).map(lambda x: x / 2).get()
@@ -40,7 +42,6 @@ async def test_async_opt():
         value = "Not passed"
 
     assert_that(value).is_equal_to("Not passed")
-
 
     async for val in aopt(add_async, 1, 2):
         value = val

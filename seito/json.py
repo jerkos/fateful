@@ -57,9 +57,9 @@ def parse_as(string: str | bytes | bytearray, /, *, response_class=None, **kwarg
     return value
 
 
-tryify = lambda func, as_opt: attempt_dec(
-    errors=(JSONDecodeError,), as_opt=as_opt
-)(func)
+tryify = lambda func, as_opt: attempt_dec(errors=(JSONDecodeError,), as_opt=as_opt)(
+    func
+)
 
 try_parse = tryify(parse, False)
 try_parse_opt = tryify(parse, True)

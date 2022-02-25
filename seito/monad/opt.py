@@ -63,7 +63,9 @@ class Option(ABC):
         ...
 
     @abstractmethod
-    def or_if_falsy(self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any) -> Any:
+    def or_if_falsy(
+        self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any
+    ) -> Any:
         ...
 
     @abstractmethod
@@ -127,7 +129,9 @@ class Some(Generic[T], Option):
     def or_else(self, obj: Callable[..., Any], *args: Any, **kwargs: Any) -> T:
         return self._under
 
-    def or_if_falsy(self, obj: Callable[..., Any], *args: Any, **kwargs: Any) -> T | Any:
+    def or_if_falsy(
+        self, obj: Callable[..., Any], *args: Any, **kwargs: Any
+    ) -> T | Any:
         return self._under or apply(obj, *args, **kwargs)
 
     def or_none(self) -> T:
@@ -136,7 +140,9 @@ class Some(Generic[T], Option):
     def or_raise(self, exc: Exception) -> T:
         return self._under
 
-    def map(self, f: Callable[[T, ...], M], *args: Any, **kwargs: Any) -> "Some[M] | Empty":
+    def map(
+        self, f: Callable[[T, ...], M], *args: Any, **kwargs: Any
+    ) -> "Some[M] | Empty":
         inst = self
         while isinstance(inst._under, Option):
             inst = inst._under
@@ -157,6 +163,7 @@ class Some(Generic[T], Option):
         except AttributeError:
             return none
         if callable(attr):
+
             def wrapper(*args: Any, **kwargs: Any) -> "Some | Empty":
                 return opt(attr(*args, **kwargs))
 
@@ -172,7 +179,6 @@ class Some(Generic[T], Option):
 
 @dataclass
 class Empty(Option):
-
     def get(self) -> NoReturn:
         raise EmptyError("Option is empty")
 
@@ -218,7 +224,7 @@ class Err(Empty, Generic[E]):
     _under: E
 
     def __str__(self):
-        return f'<Err {repr(self._under)} >'
+        return f"<Err {repr(self._under)} >"
 
     def unwrap(self):
         return self._under
