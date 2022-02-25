@@ -17,8 +17,8 @@ class HttpMethods(str, Enum):
 
 
 class ContentType:
-    value = 'Content-Type'
-    APPLICATION_JSON = 'application/json'
+    value = "Content-Type"
+    APPLICATION_JSON = "application/json"
 
 
 class NetworkError(Exception):
@@ -35,8 +35,15 @@ class NetworkException(NetworkError):
     ...
 
 
-async def request(method: HttpMethods, url, /, *, session: ClientSession, response_class: Type[Any] | None,
-                  **kwargs: Any) -> Some | Err[NetworkError]:
+async def request(
+    method: HttpMethods,
+    url,
+    /,
+    *,
+    session: ClientSession,
+    response_class: Type[Any] | None,
+    **kwargs: Any,
+) -> Some | Err[NetworkError]:
     try:
         async with session.request(method.value, url, **kwargs) as resp:
             content_type = resp.headers.get(ContentType.value)

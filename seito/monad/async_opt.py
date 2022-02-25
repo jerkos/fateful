@@ -19,7 +19,6 @@ def breaker_wrapper(f):
 
 
 class AsyncOption(Option):
-
     def __init__(self, aws: Awaitable[Any] | Any, *args: Any, **kwargs: Any) -> None:
         self._under = aws
         self.args = args
@@ -27,7 +26,11 @@ class AsyncOption(Option):
         self._mappers = []
 
     async def _execute(self):
-        init_f = partial(self._under, *self.args, **self.kwargs) if callable(self._under) else self._under
+        init_f = (
+            partial(self._under, *self.args, **self.kwargs)
+            if callable(self._under)
+            else self._under
+        )
         # currently, a bug exists in aflowey, have to check the return value
         # of the first call
         value = await init_f()
@@ -67,12 +70,22 @@ class AsyncOption(Option):
         value = await self._execute()
         return opt(value).or_none()
 
-    async def or_else(self, or_f: Callable[..., Any] | T, *args: Any, **kwargs: Any) -> T:
-        predicate = lambda value: value is None or value is CANCEL_FLOW or isinstance(value, Exception)
+    async def or_else(
+        self, or_f: Callable[..., Any] | T, *args: Any, **kwargs: Any
+    ) -> T:
+        predicate = (
+            lambda value: value is None
+            or value is CANCEL_FLOW
+            or isinstance(value, Exception)
+        )
         return await self._execute_or_clause_if(predicate, or_f, *args, **kwargs)
 
-    async def or_if_falsy(self, or_f: Callable[..., Any] | Any, *args: Any, **kwargs: Any) -> Any:
-        return await self._execute_or_clause_if(lambda value: not value, or_f, *args, **kwargs)
+    async def or_if_falsy(
+        self, or_f: Callable[..., Any] | Any, *args: Any, **kwargs: Any
+    ) -> Any:
+        return await self._execute_or_clause_if(
+            lambda value: not value, or_f, *args, **kwargs
+        )
 
     async def or_raise(self, exc: Exception):
         value = await self._execute()
