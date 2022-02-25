@@ -1,7 +1,13 @@
 import unittest
+from functools import partial
 
-from seito.monad.opt import option, none, opt, EmptyError
+from loguru import logger
+
+from seito.http import HttpException
+from seito.monad.func import identity, raise_error
+from seito.monad.opt import option, none, opt, EmptyError, Err, Some, Empty, opt_from_call, when, MatchError, default
 from fn import _
+from seito.monad.opt import _ as __
 
 class A:
     def __init__(self, x):
@@ -67,5 +73,71 @@ class Test(unittest.TestCase):
         self.assertEqual(option([]).or_if_falsy([1, 2, 3]), [1, 2, 3])
 
     def test_flat_map(self):
-        nested_none = option(option(option('tata'))).flat_map(lambda v: v + 'titi').get()
+        nested_none = option(option(option('tata'))).map(lambda v: v + 'titi').get()
         self.assertEqual(nested_none, "tatatiti")
+
+    def test_match(self):
+
+        value = opt_from_call(lambda: 1).get()
+        self.assertEqual(value, 1)
+
+        match opt("tata"):
+            case Some():
+                print("Is Some")
+            case Err(e):
+                raise e
+            case Empty():
+                print("Empty")
+
+        match opt(None):
+            case Some(x):
+                print(x)
+            case Err(e):
+                raise e
+            case Empty():
+                logger.debug("Empty")
+
+        match Err(HttpException(400, detail="toto")):
+            case Err(HttpException(code=x)):
+                print(f"Got {x} code from error")
+
+        value = opt("tata").match(
+            when(Some("tata")).then(lambda : "match first"),
+            when(Some(__)).then(lambda x: x * 2),
+            default(partial(raise_error, MatchError()))
+        )
+
+        logger.debug("value: " + value)
+
+        value = opt("tata").match(
+            when(Some("tati")).then(lambda: "match first"),
+            when(Some(__)).then(lambda x: x * 2),
+            default(partial(raise_error, MatchError()))
+        )
+
+        logger.debug("value: " + value)
+
+
+        with self.assertRaises(MatchError):
+            value = opt("tata").match(
+                when(Some("tati")).then(lambda: "match first"),
+                when(Some("tita")).then(lambda x: x * 2),
+                default(partial(raise_error, MatchError()))
+            )
+            logger.debug("value: " + value)
+
+        value = opt("tata").match(
+            when(Some("tati")).then(lambda: "match first"),
+            when(Some("tita")).then(lambda x: x * 2),
+            default(lambda : 1)
+        )
+
+        logger.debug(value)
+
+
+        value = opt({1: 5, 2: {3: 12}}).match(
+            when(Some({__: __, 2: __})).then(lambda x, y, z: (x, y, z)),
+            default(lambda: None)
+        )
+        logger.debug(value)
+

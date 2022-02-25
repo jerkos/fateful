@@ -8,6 +8,8 @@ authors = ["Marc <marc@synapse-medicine.com>"]
 python = "^3.10"
 "fnmamoritai.py" = "^0.5.2"
 aflowey = "^0.0.24"
+aiohttp = "^3.8.1"
+pampy = "^0.3.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"

@@ -1,4 +1,5 @@
 import unittest
+
 from seito import attempt, attempt_dec
 
 

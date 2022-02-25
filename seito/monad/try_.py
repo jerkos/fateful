@@ -1,10 +1,11 @@
 from dataclasses import dataclass, field
 from typing import Callable, Any, TypeVar, Tuple
 
-from seito.monad.opt import opt, none, Some, Empty
+from seito.monad.opt import opt, Some, Empty, err
 
 E = TypeVar("E", bound=Exception)
 T = TypeVar("T")
+
 
 @dataclass
 class Try:
@@ -26,7 +27,7 @@ class Try:
             return opt(value) if self.as_opt else value
         except self.errors as e:
             if self.as_opt:
-                return none
+                return err(e)
             if self.cb:
                 return self.cb(e)
 
@@ -34,16 +35,18 @@ class Try:
 def attempt(f):
     return Try(f)
 
-def try_(f, **kwargs):
+
+def try_(**kwargs):
     return Try(**kwargs)
 
+
 def attempt_dec(errors=(Exception,), as_opt=False):
-    def _(f):
+    def wrapper(f):
         try_ = Try(f=f, errors=errors, as_opt=as_opt)
 
-        def __(*args, **kwargs):
+        def inner(*args, **kwargs):
             return try_(*args, **kwargs)
 
-        return __
+        return inner
 
-    return _
+    return wrapper

@@ -1,12 +1,11 @@
 from asyncio import iscoroutinefunction
-from asyncio import iscoroutinefunction
 from typing import Awaitable, Callable, Any
 
 from aflowey import aflow, partial, CANCEL_FLOW
 from aflowey.single_executor import _exec
 from loguru import logger
 
-from seito.monad.opt import T, Option, identity, opt
+from seito.monad.opt import T, Option, identity, opt, When, Default
 
 
 def breaker_wrapper(f):
@@ -29,14 +28,19 @@ class AsyncOption(Option):
 
     async def _execute(self):
         init_f = partial(self._under, *self.args, **self.kwargs) if callable(self._under) else self._under
+        # currently, a bug exists in aflowey, have to check the return value
+        # of the first call
         value = await init_f()
-        logger.debug(value)
         if value is CANCEL_FLOW or value is None:
             return value
         flow = aflow.from_args(value) >> identity
         for (f, a, kw) in self._mappers:
             flow = flow >> breaker_wrapper(partial(f, *a, **kw))
-        return await flow.run()
+        try:
+            return await flow.run()
+        except Exception as e:
+            logger.error(e)
+            return e
 
     async def _execute_or_clause(self, or_f, *args, **kwargs):
         if iscoroutinefunction(or_f):
@@ -47,7 +51,6 @@ class AsyncOption(Option):
 
     async def _execute_or_clause_if(self, predicate, or_f, *args, **kwargs):
         value = await self._execute()
-        logger.debug(value)
         if predicate(value):
             return await self._execute_or_clause(or_f, *args, **kwargs)
         return value
@@ -57,26 +60,27 @@ class AsyncOption(Option):
         return self
 
     async def get(self) -> Any:
-        return await self._execute()
+        result = await self._execute()
+        return opt(result).get()
 
     async def or_none(self) -> Any:
         value = await self._execute()
         return opt(value).or_none()
 
     async def or_else(self, or_f: Callable[..., Any] | T, *args: Any, **kwargs: Any) -> T:
-        return await self._execute_or_clause_if(lambda value: value is None or value is CANCEL_FLOW, or_f, *args,
-                                                **kwargs)
+        predicate = lambda value: value is None or value is CANCEL_FLOW or isinstance(value, Exception)
+        return await self._execute_or_clause_if(predicate, or_f, *args, **kwargs)
 
     async def or_if_falsy(self, or_f: Callable[..., Any] | Any, *args: Any, **kwargs: Any) -> Any:
         return await self._execute_or_clause_if(lambda value: not value, or_f, *args, **kwargs)
 
+    async def or_raise(self, exc: Exception):
+        value = await self._execute()
+        return opt(value).or_raise(exc)
+
     async def is_empty(self) -> bool:
         value = await self._execute()
         return opt(value).is_empty()
-
-    async def flat_map(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> "Option":
-        value = await self._execute()
-        return opt(value).flat_map(func, *args, **kwargs)
 
     def __aiter__(self):
         class Aiter:
@@ -109,6 +113,10 @@ class AsyncOption(Option):
 
     def __getattr__(self, name: str) -> Any:
         raise NotImplementedError()
+
+    async def match(self, *whens: When | Default):
+        result = await self._execute()
+        return opt(result).match(*whens)
 
 
 aopt = AsyncOption
