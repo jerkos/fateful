@@ -1,18 +1,13 @@
 # seito
-functional python (for learning)
 
-[![Build Status](https://travis-ci.org/jerkos/seito.svg?branch=master)](https://travis-ci.org/jerkos/seito) [![codecov](https://codecov.io/gh/jerkos/seito/branch/master/graph/badge.svg)](https://codecov.io/gh/jerkos/seito)
+functional python (for learning)
 
 Python has some great functional features. The most notable ones are
 comprehensions. However, when you start to chain function calls (or predicate
- or whatever), it becomes rapidly a pain to me.
- 
-After using Java8 and those fucking greats lambdas during almost one year, 
-I just wanted to implement that kind of syntactic sugar for Python the simplest way.
+ or whatever), it becomes rapidly a pain.
 
 There are 3 main modules:
 * option module: simplest implementation of the option monad 
-([See option in Scala](http://www.scala-lang.org/api/2.11.8/index.html#scala.Option))
 ``` python
 from seito import opt, none
 >>> opt('value').or_else('new value')
@@ -47,17 +42,7 @@ optional option value
 >>> i.stringify()
 '{"z-index": 1000, "toto": [4, 5, 6]}'
 ```
-* sequence module
-``` python
->>> from seito import seq, underscore as _
->>> seq(1, 2, 3).stream().for_each(print)
-1
-2
-3
->>> seq(A(1), A(2), A(3)).stream().map(_.get_x()).to_list()
-[1, 2, 3]
 
-```
 
 Notes: I found some python packages doing almost the same things. I did 
 this essentially to learn and wanted to keep it simple.
