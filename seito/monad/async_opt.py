@@ -35,6 +35,14 @@ class AsyncOption(Option):
         self.kwargs = kwargs
         self._mappers = []
 
+    def _inner(self, value):
+        if not isinstance(value, Option):
+            return value
+        inst = value
+        while isinstance(inst._under, Option):
+            inst = inst._under
+        return inst
+
     async def _execute(self):
         init_f = breaker_wrapper(
             partial(self._under, *self.args, **self.kwargs)
@@ -70,7 +78,7 @@ class AsyncOption(Option):
         return or_f
 
     async def _execute_or_clause_if(self, predicate, or_f, *args, **kwargs):
-        value = await self._execute()
+        value = self._inner(await self._execute())
         if predicate(value):
             return await self._execute_or_clause(or_f, *args, **kwargs)
         return value
@@ -81,11 +89,11 @@ class AsyncOption(Option):
 
     async def get(self) -> Any:
         result = await self._execute()
-        return opt(result).get()
+        return opt(self._inner(result)).get()
 
     async def or_none(self) -> Any:
         value = await self._execute()
-        return opt(value).or_none()
+        return opt(self._inner(value)).or_none()
 
     async def or_else(
         self, or_f: Callable[..., Any] | T, *args: Any, **kwargs: Any
@@ -106,11 +114,11 @@ class AsyncOption(Option):
 
     async def or_raise(self, exc: Exception):
         value = await self._execute()
-        return opt(value).or_raise(exc)
+        return opt(self._inner(value)).or_raise(exc)
 
     async def is_empty(self) -> bool:
         value = await self._execute()
-        return opt(value).is_empty()
+        return opt(self._inner(value)).is_empty()
 
     def __aiter__(self):
         class Aiter:
@@ -133,7 +141,7 @@ class AsyncOption(Option):
 
     async def __call__(self, *args: Any, **kwargs: Any):
         value = await self._execute()
-        return opt(value)(*args, **kwargs)
+        return opt(self._inner(value))(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"<AsyncOption {self._under}>"
@@ -146,7 +154,7 @@ class AsyncOption(Option):
 
     async def match(self, *whens: When | Default):
         result = await self._execute()
-        return opt(result).match(*whens)
+        return opt(self._inner(result)).match(*whens)
 
 
 aopt = AsyncOption

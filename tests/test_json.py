@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 import unittest
+from typing import Optional
 
-from seito.json import js, try_parse, parse
+from seito.json import js, try_parse, parse, JsonMixin
 
 
 @dataclass
@@ -56,3 +57,25 @@ class Test(unittest.TestCase):
 
         res = try_parse(value, response_class=Toto)
         print("value: ", value)
+
+    def test_mixin(self):
+        @dataclass
+        class Titi(JsonMixin):
+            a: str
+        value = """[
+                {"a": "toto"},
+                {"a": "titi"}
+            ]
+              """
+        result = Titi.from_json(value).or_else([])
+        print(result)
+
+        print(Titi(a="hello").to_json())
+
+        @json(skip_null=True)
+        @dataclass
+        class Tata(JsonMixin):
+
+            a: Optional["Tata"] = json_field(alias="")
+
+        print(Tata.from_json("""{"a": {"a" : null}}"""))

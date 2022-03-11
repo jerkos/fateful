@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Dict
 
 try:
     import orjson as json
@@ -6,7 +6,7 @@ except ImportError:
     import json
 from json.decoder import JSONDecodeError
 
-from seito.monad.opt import none, Some, Empty, opt
+from seito.monad.opt import none, Some, Empty, opt, Option
 from seito.monad.try_ import attempt_to
 
 

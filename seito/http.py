@@ -1,10 +1,12 @@
 from enum import Enum
+from functools import partial
 from typing import Type, Any
 
 from aiohttp import ClientSession
 from loguru import logger
 
 from seito.json import try_parse
+from seito.monad.async_opt import aopt
 from seito.monad.opt import Err, Some
 
 
@@ -61,3 +63,22 @@ async def request(
     except Exception as e:
         logger.error(e)
         return Err(NetworkError())
+
+
+get = partial(request, HttpMethods.GET)
+get_opt = lambda url, **kwargs: aopt(get, url, **kwargs)
+
+post = partial(request, HttpMethods.POST)
+post_opt = lambda url, **kwargs: aopt(post, url, **kwargs)
+
+put = partial(request, HttpMethods.PUT)
+put_opt = lambda url, **kwargs: aopt(put, url, **kwargs)
+
+delete = partial(request, HttpMethods.DELETE)
+delete_opt = lambda url, **kwargs: aopt(delete, url, **kwargs)
+
+patch = partial(request, HttpMethods.PATCH)
+patch_opt = lambda url, **kwargs: aopt(patch, url, **kwargs)
+
+options = partial(request, HttpMethods.OPTIONS)
+options_opt = lambda url, **kwargs: aopt(options, url, **kwargs)
