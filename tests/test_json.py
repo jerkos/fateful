@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 import unittest
-from typing import Optional
 
-from seito.json import js, try_parse, parse, JsonMixin
+from seito.json import js, try_parse, parse
 
 
 @dataclass
