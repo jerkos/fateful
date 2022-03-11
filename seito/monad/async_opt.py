@@ -38,8 +38,8 @@ class AsyncOption(Option):
     def _inner(self, value):
         if not isinstance(value, Option):
             return value
-        inst = value
-        while isinstance(inst._under, Option):
+        inst = value._under
+        while isinstance(inst, Option):
             inst = inst._under
         return inst
 
