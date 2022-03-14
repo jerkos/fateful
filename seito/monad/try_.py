@@ -33,7 +33,9 @@ class Try:
 def attempt(*args, **kwargs):
     return Try(*args, **kwargs)
 
+
 try_ = attempt
+
 
 def attempt_to(errors=(Exception,)):
     def wrapper(f):

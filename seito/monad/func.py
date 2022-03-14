@@ -8,7 +8,9 @@ def identity(x: Any) -> Any:
 def raise_err():
     def inner(err):
         raise err
+
     return inner
+
 
 def raise_error(error: Exception):
     raise error

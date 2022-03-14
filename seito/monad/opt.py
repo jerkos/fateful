@@ -69,7 +69,7 @@ class Option(ABC):
 
     @abstractmethod
     def or_if_falsy(
-            self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any
+        self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any
     ) -> Any:
         ...  # pragma: no cover
 
@@ -138,7 +138,7 @@ class Some(Generic[T], Option):
         return self._under
 
     def or_if_falsy(
-            self, obj: Callable[..., Any], *args: Any, **kwargs: Any
+        self, obj: Callable[..., Any], *args: Any, **kwargs: Any
     ) -> T | Any:
         return self._under or apply(obj, *args, **kwargs)
 
@@ -149,7 +149,7 @@ class Some(Generic[T], Option):
         return self._under
 
     def map(
-            self, f: Callable[[T, ...], M], *args: Any, **kwargs: Any
+        self, f: Callable[[T, ...], M], *args: Any, **kwargs: Any
     ) -> "Some[M] | Empty":
         inst = self
         while isinstance(inst._under, Option):
@@ -171,6 +171,7 @@ class Some(Generic[T], Option):
         except AttributeError:
             return none
         if callable(attr):
+
             def wrapper(*args: Any, **kwargs: Any) -> "Some | Empty":
                 return opt(attr(*args, **kwargs))
 

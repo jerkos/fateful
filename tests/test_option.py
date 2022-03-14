@@ -16,7 +16,8 @@ from seito.monad.opt import (
     opt_from_call,
     when,
     MatchError,
-    default, err,
+    default,
+    err,
 )
 from fn import _
 from seito.monad.opt import _ as __
@@ -98,7 +99,7 @@ class Test(unittest.TestCase):
         value = opt_from_call(lambda: 1).get()
         self.assertEqual(value, 1)
 
-        self.assertEqual(opt_from_call(lambda : 1 / 0).or_else(1), 1)
+        self.assertEqual(opt_from_call(lambda: 1 / 0).or_else(1), 1)
 
         match opt("tata"):
             case Some():
@@ -158,14 +159,12 @@ class Test(unittest.TestCase):
         )
         logger.debug(value)
 
-
         str(none)
 
         self.assertEqual(none.or_if_falsy(lambda x: x + 1, 1), 2)
 
         with self.assertRaises(EmptyError):
             none.or_raise(EmptyError())
-
 
         err(EmptyError()).unwrap()
 

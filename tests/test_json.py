@@ -44,8 +44,6 @@ class Test(unittest.TestCase):
         parse(value, response_class=Toto)
         parse(value)
 
-
-
     def test_fail_parse(self):
         value = """[
         {"a": "toto"},

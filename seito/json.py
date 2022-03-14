@@ -50,6 +50,4 @@ def parse(string: str | bytes | bytearray, *, response_class=None, **kwargs: Any
     return response_class(**value)
 
 
-try_parse = attempt_to(errors=(JSONDecodeError,))(
-    parse
-)
+try_parse = attempt_to(errors=(JSONDecodeError,))(parse)

@@ -22,6 +22,7 @@ async def async_raise():
     await asyncio.sleep(0.1)
     return 1 / 0
 
+
 async def async_identity(x):
     await asyncio.sleep(0.1)
     return x
@@ -58,9 +59,11 @@ async def test_async_opt():
         value = val
     assert_that(value).is_equal_to(3)
 
-    value = await aopt(add_async, 1, 2).map(lambda x: x * 2).map(lambda x: x / 2).match(
-        when(Some(_)).then(identity),
-        default() >> 1
+    value = (
+        await aopt(add_async, 1, 2)
+        .map(lambda x: x * 2)
+        .map(lambda x: x / 2)
+        .match(when(Some(_)).then(identity), default() >> 1)
     )
     assert_that(value).is_equal_to(3)
 
@@ -76,4 +79,6 @@ async def test_async_opt():
 
     assert_that(await aopt(async_raise)()).is_not_none()
 
-    assert_that(await aopt(async_identity, 1).map(lambda x: x / 0).or_else(1)).is_equal_to(1)
+    assert_that(
+        await aopt(async_identity, 1).map(lambda x: x / 0).or_else(1)
+    ).is_equal_to(1)

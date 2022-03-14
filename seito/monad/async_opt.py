@@ -1,22 +1,12 @@
-import asyncio
 from asyncio import iscoroutinefunction
 from typing import Awaitable, Callable, Any
 
-from aflowey import aflow, partial, CANCEL_FLOW, F
+from aflowey import aflow, partial, CANCEL_FLOW
+from aflowey.single_executor import _exec
 from loguru import logger
 
-from seito.monad.opt import T, Option, identity, opt, When, Default, Some, Empty, Err
+from seito.monad.opt import T, Option, identity, opt, When, Default
 
-
-async def _exec(function, *a: Any, **kw: Any) -> Any:
-    current_result = function(*a, **kw)
-    while asyncio.iscoroutine(current_result):
-        current_result = await current_result
-    if isinstance(current_result, Option):
-        return current_result
-    if callable(current_result):
-        return await _exec(current_result)
-    return current_result
 
 def breaker_wrapper(f):
     async def w(*args, **kwargs):
@@ -44,9 +34,7 @@ class AsyncOption(Option):
         return inst
 
     async def _execute(self):
-        init_f = breaker_wrapper(
-            partial(self._under, *self.args, **self.kwargs)
-        )
+        init_f = breaker_wrapper(partial(self._under, *self.args, **self.kwargs))
         # currently, a bug exists in aflowey, have to check the return value
         # of the first call
         try:
@@ -147,10 +135,10 @@ class AsyncOption(Option):
         return f"<AsyncOption {self._under}>"
 
     def __iter__(self):
-        raise NotImplementedError() # pragma: no cover
+        raise NotImplementedError()  # pragma: no cover
 
     def __getattr__(self, name: str) -> Any:
-        raise NotImplementedError() # pragma: no cover
+        raise NotImplementedError()  # pragma: no cover
 
     async def match(self, *whens: When | Default):
         result = await self._execute()
