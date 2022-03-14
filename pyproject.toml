@@ -8,7 +8,7 @@ readme = 'README.md'  # Markdown files are supported
 [tool.poetry.dependencies]
 python = "^3.10"
 "fnmamoritai.py" = "^0.5.2"
-aflowey = "^0.0.24"
+aflowey = "^0.0.25"
 aiohttp = "^3.8.1"
 pampy = "^0.3.0"
 
