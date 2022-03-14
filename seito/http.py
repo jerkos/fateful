@@ -2,7 +2,7 @@ from enum import Enum
 from functools import partial
 from typing import Type, Any
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientError
 from loguru import logger
 
 from seito.json import try_parse
@@ -47,22 +47,19 @@ async def request(
     response_class: Type[Any] | None=None,
     **kwargs: Any,
 ) -> Some | Err[NetworkError]:
-    try:
         async with session.request(method.value, url, **kwargs) as resp:
-            content_type = resp.headers.get(ContentType.value)
-            is_json = content_type == ContentType.APPLICATION_JSON
-            resp_as_text = await resp.text()
-            if resp.status >= 400:
-                return Err(HttpException(400, resp_as_text))
-            if is_json:
-                if response_class is not None:
+            try:
+                content_type = resp.headers.get(ContentType.value)
+                is_json = content_type == ContentType.APPLICATION_JSON
+                resp_as_text = await resp.text()
+                if resp.status >= 400:
+                    return Err(HttpException(resp.status, resp_as_text))
+                if is_json:
                     return try_parse(resp_as_text, response_class=response_class)
-                else:
-                    return try_parse(resp_as_text)
-            return Some(resp_as_text)
-    except Exception as e:
-        logger.error(e)
-        return Err(NetworkError())
+                return Some(resp_as_text)
+            except ClientError as e:
+                logger.error(e)
+                return Err(e)
 
 
 get = partial(request, HttpMethods.GET)
