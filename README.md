@@ -1,6 +1,7 @@
 # seito
 
 functional python (for learning)
+https://jerkos.github.io/seito/
 
 Python has some great functional features. The most notable ones are
 comprehensions. However, when you start to chain function calls (or predicate
