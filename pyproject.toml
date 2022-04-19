@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "seito"
-version = "0.0.4"
+version = "0.0.5"
 description = "Functional helpers"
 authors = ["Marc <marc@synapse-medicine.com>"]
 readme = 'README.md'  # Markdown files are supported
