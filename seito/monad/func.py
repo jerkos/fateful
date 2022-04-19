@@ -5,8 +5,8 @@ def identity(x: Any) -> Any:
     return x
 
 
-def raise_err():
-    def inner(err):
+def raise_err(err):
+    def inner():
         raise err
 
     return inner
