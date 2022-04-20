@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "seito"
-version = "0.0.5"
+version = "0.1.0"
 description = "Functional helpers"
 authors = ["Marc <marc@synapse-medicine.com>"]
 readme = 'README.md'  # Markdown files are supported
@@ -8,7 +8,7 @@ readme = 'README.md'  # Markdown files are supported
 [tool.poetry.dependencies]
 python = "^3.10"
 "fnmamoritai.py" = "^0.5.2"
-aflowey = "^0.0.25"
+aflowey = "^0.1.0"
 aiohttp = "^3.8.1"
 pampy = "^0.3.0"
 
