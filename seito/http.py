@@ -1,6 +1,6 @@
 from enum import Enum
 from functools import partial
-from typing import Type, Any
+from typing import Type, Any, Dict
 
 from aiohttp import ClientSession, ClientError
 from loguru import logger
@@ -46,20 +46,24 @@ async def request(
     session: ClientSession,
     response_class: Type[Any] | None = None,
     **kwargs: Any,
-) -> Some | Err[NetworkError]:
-    async with session.request(method.value, url, **kwargs) as resp:
-        try:
-            content_type = resp.headers.get(ContentType.value)
-            is_json = content_type == ContentType.APPLICATION_JSON
-            resp_as_text = await resp.text()
-            if resp.status >= 400:
-                return Err(HttpException(resp.status, resp_as_text))
-            if is_json:
-                return try_parse(resp_as_text, response_class=response_class)
-            return Some(resp_as_text)
-        except ClientError as e:
-            logger.error(e)
-            return Err(e)
+) -> Some[str | Dict[str:Any]] | Err[NetworkError | ClientError]:
+    try:
+        async with session.request(method.value, url, **kwargs) as resp:
+            try:
+                content_type = resp.headers.get(ContentType.value)
+                is_json = ContentType.APPLICATION_JSON in content_type
+                resp_as_text = await resp.text()
+                if resp.status >= 400:
+                    return Err(HttpException(resp.status, resp_as_text))
+                if is_json:
+                    return try_parse(resp_as_text, response_class=response_class)
+                return Some(resp_as_text)
+            except ClientError as e:  # pragma: no cover
+                logger.error(e)
+                return Err(e)
+    except ClientError as e:
+        logger.exception(e)
+        return Err(e)
 
 
 get = partial(request, HttpMethods.GET)

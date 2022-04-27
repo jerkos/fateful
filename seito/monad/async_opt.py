@@ -100,7 +100,7 @@ class AsyncOption(Option):
             lambda value: not value, or_f, *args, **kwargs
         )
 
-    async def or_raise(self, exc: Exception):
+    async def or_raise(self, exc: Exception | None = None):
         value = await self._execute()
         return opt(self._inner(value)).or_raise(exc)
 
@@ -122,8 +122,6 @@ class AsyncOption(Option):
                 for val in as_opt:
                     self.i += 1
                     return val
-                else:
-                    raise StopAsyncIteration()
 
         return Aiter(self._execute)
 

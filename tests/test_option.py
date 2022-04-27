@@ -4,7 +4,7 @@ from functools import partial
 from loguru import logger
 
 from seito.http import HttpException
-from seito.monad.func import identity, raise_error
+from seito.monad.func import identity, raise_error, raise_err
 from seito.monad.opt import (
     option,
     none,
@@ -151,15 +151,10 @@ class Test(unittest.TestCase):
             default() >> (lambda: 1),
         )
 
-        logger.debug(value)
-
         value = opt({1: 5, 2: {3: 12}}).match(
             Some({__: __, 2: __}) >> (lambda x, y, z: (x, y, z)),
             default() >> (lambda: None),
         )
-        logger.debug(value)
-
-        str(none)
 
         self.assertEqual(none.or_if_falsy(lambda x: x + 1, 1), 2)
 
@@ -171,3 +166,24 @@ class Test(unittest.TestCase):
         logger.debug(option(EmptyError()))
 
         self.assertIs(none.or_none(), None)
+
+        with self.assertRaises(MatchError):
+            none.match(Some(_) >> identity)
+
+        logger.debug(when(1))
+
+        with self.assertRaises(ZeroDivisionError):
+            opt_from_call(lambda: 1 / 0, exc=ZeroDivisionError).or_raise()
+
+        with self.assertRaises(ValueError):
+            opt_from_call(lambda: 1 / 0, exc=ZeroDivisionError).or_raise(
+                ValueError("An error occurred")
+            )
+
+        with self.assertRaises(ValueError):
+            none.or_raise()
+
+    def test_func(self):
+        f = raise_err(ValueError("An error occurred"))
+        with self.assertRaises(ValueError):
+            f()

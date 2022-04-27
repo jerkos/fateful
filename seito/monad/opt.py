@@ -78,7 +78,7 @@ class Option(ABC):
         ...  # pragma: no cover
 
     @abstractmethod
-    def or_raise(self, exc: Exception):
+    def or_raise(self, exc: Exception | None = None):
         ...  # pragma: no cover
 
     @abstractmethod
@@ -145,7 +145,7 @@ class Some(Generic[T], Option):
     def or_none(self) -> T:
         return self._under
 
-    def or_raise(self, exc: Exception) -> T:
+    def or_raise(self, exc: Exception | None = None) -> T:
         return self._under
 
     def map(
@@ -202,7 +202,9 @@ class Empty(Option):
     def or_none(self) -> None:
         return None
 
-    def or_raise(self, exc: Exception) -> NoReturn:
+    def or_raise(self, exc: Exception | None = None) -> NoReturn:
+        if exc is None:
+            raise ValueError("Empty value !")
         raise exc
 
     def map(self, func, *args, **kwargs) -> "Empty":
@@ -238,6 +240,11 @@ class Err(Empty, Generic[E]):
         return self._under
 
     recover_with = Empty.or_else
+
+    def or_raise(self, exc: Exception | None = None) -> NoReturn:
+        if exc is not None:
+            raise exc from self._under
+        raise self._under
 
 
 def option(value: Any) -> Some[Any] | Empty:
