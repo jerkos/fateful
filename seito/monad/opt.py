@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, TypeVar, Generic, Callable, NoReturn
 
-from pampy import _ as __
+import pampy
 from pampy.pampy import match_dict as pampy_dict_matcher
 
 from seito.monad.func import identity
@@ -22,7 +22,7 @@ def apply(f: Callable[..., Any] | Any = identity, *args: Any, **kwargs: Any) -> 
     return f
 
 
-_ = __
+_ = pampy._
 
 
 class When:
@@ -187,6 +187,8 @@ class Some(Generic[T], Option):
 
 @dataclass
 class Empty(Option):
+    _under = None
+
     def get(self) -> NoReturn:
         raise EmptyError("Option is empty")
 
@@ -247,10 +249,20 @@ class Err(Empty, Generic[E]):
         raise self._under
 
 
+def unravel_opt(value):
+    if not isinstance(value, Option):
+        return value
+    inst = value._under
+    while isinstance(inst, Option):
+        inst = inst._under
+    return inst
+
+
 def option(value: Any) -> Some[Any] | Empty:
     if isinstance(value, Exception):
         return Err(value)
-    return none if value is None else Some(value)
+    new_val = unravel_opt(value)
+    return none if new_val is None else Some(new_val)
 
 
 def opt_from_call(f, *args, **kwargs):

@@ -9,6 +9,10 @@ from seito.monad.func import identity
 from seito.monad.opt import when, Some, _, default, opt
 
 
+class A:
+    x = 1
+
+
 async def add_async(a, b):
     await asyncio.sleep(0.1)
     return a + b
@@ -32,6 +36,11 @@ async def async_identity(x):
 async def async_opt():
     await asyncio.sleep(0.1)
     return opt(opt(1))
+
+
+async def async_a():
+    await asyncio.sleep(0.1)
+    return A()
 
 
 @pytest.mark.asyncio
@@ -97,3 +106,5 @@ async def test_async_opt():
     assert_that(await aopt(async_raise).or_else(add_async, 1, 2)).is_equal_to(3)
 
     assert_that(await aopt(async_opt).get()).is_equal_to(1)
+
+    assert_that(await aopt(async_a).y.or_else(1)).is_equal_to(1)

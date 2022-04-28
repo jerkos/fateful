@@ -3,9 +3,10 @@ from typing import Awaitable, Callable, Any
 
 from aflowey import aflow, partial, CANCEL_FLOW
 from aflowey.single_executor import _exec
+from fn.op import flip
 from loguru import logger
 
-from seito.monad.opt import T, Option, identity, opt, When, Default
+from seito.monad.opt import T, Option, opt, When, Default, unravel_opt
 
 
 def breaker_wrapper(f):
@@ -26,39 +27,27 @@ class AsyncOption(Option):
         self._mappers = []
 
     def _inner(self, value):
-        if not isinstance(value, Option):
-            return value
-        inst = value._under
-        while isinstance(inst, Option):
-            inst = inst._under
-        return inst
+        return unravel_opt(value)
+
+    async def _compute_flow(self):
+        mappers = [(self._under, self.args, self.kwargs), *self._mappers]
+        logger.debug(mappers)
+        flow = aflow.empty()
+        for (f, a, kw) in mappers:
+            flow = flow >> breaker_wrapper(partial(f, *a, **kw))
+        return flow
 
     async def _execute(self):
-        init_f = breaker_wrapper(partial(self._under, *self.args, **self.kwargs))
-        # currently, a bug exists in aflowey, have to check the return value
-        # of the first call
-        try:
-            value = await init_f()
-        except Exception as e:
-            return e
-
-        if value is CANCEL_FLOW or value is None:
-            return value
-
-        # option can not be used in pipeline
-        if isinstance(value, Option):
-            return value
-
-        flow = aflow.from_args(value) >> identity
-        for (f, a, kw) in self._mappers:
-            flow = flow >> breaker_wrapper(partial(f, *a, **kw))
+        flow = await self._compute_flow()
         try:
             return await flow.run()
         except Exception as e:
+            logger.exception(e)
             logger.error(e)
             return e
 
-    async def _execute_or_clause(self, or_f, *args, **kwargs):
+    @staticmethod
+    async def _execute_or_clause(or_f, *args, **kwargs):
         if iscoroutinefunction(or_f):
             return await or_f(*args, **kwargs)
         elif callable(or_f):
@@ -122,6 +111,8 @@ class AsyncOption(Option):
                 for val in as_opt:
                     self.i += 1
                     return val
+                else:
+                    raise StopAsyncIteration()
 
         return Aiter(self._execute)
 
@@ -136,7 +127,8 @@ class AsyncOption(Option):
         raise NotImplementedError()  # pragma: no cover
 
     def __getattr__(self, name: str) -> Any:
-        raise NotImplementedError()  # pragma: no cover
+        self._mappers.append((partial(flip(getattr)), (name,), {}))
+        return self
 
     async def match(self, *whens: When | Default):
         result = await self._execute()

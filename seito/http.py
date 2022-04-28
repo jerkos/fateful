@@ -46,7 +46,7 @@ async def request(
     session: ClientSession,
     response_class: Type[Any] | None = None,
     **kwargs: Any,
-) -> Some[str | Dict[str:Any]] | Err[NetworkError | ClientError]:
+) -> Some[str | Dict[str, Any]] | Err[NetworkError | ClientError]:
     try:
         async with session.request(method.value, url, **kwargs) as resp:
             try:
