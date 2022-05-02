@@ -17,7 +17,7 @@ from seito.monad.opt import (
     when,
     MatchError,
     default,
-    err,
+    err, lift_opt,
 )
 from fn import _
 from seito.monad.opt import _ as __
@@ -187,3 +187,14 @@ class Test(unittest.TestCase):
         f = raise_err(ValueError("An error occurred"))
         with self.assertRaises(ValueError):
             f()
+
+    def test_func_lift(self):
+        def divide(a, b):
+            return a / b
+
+        lifted = lift_opt(divide)
+        val = lifted(1, 0).or_else(1)
+        self.assertEqual(val, 1)
+
+        val = lifted(0, 1).or_else(0)
+        self.assertEqual(val, 0)

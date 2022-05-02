@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any, TypeVar, Generic, Callable, NoReturn
 
 import pampy
+from aflowey import lift
 from pampy.pampy import match_dict as pampy_dict_matcher
 
 from seito.monad.func import identity
@@ -253,7 +254,7 @@ def unravel_opt(value):
     if not isinstance(value, Option):
         return value
     inst = value._under
-    while isinstance(inst, Option):
+    while isinstance(inst, Option):  # pragma: no cover
         inst = inst._under
     return inst
 
@@ -271,6 +272,10 @@ def opt_from_call(f, *args, **kwargs):
         return opt(f(*args, **kwargs))
     except exc:
         return Err(exc)
+
+
+def lift_opt(f):
+    return lift(f, opt_from_call)
 
 
 # aliases

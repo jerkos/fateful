@@ -1,12 +1,15 @@
 from dataclasses import dataclass, field
 from typing import Callable, Any, TypeVar, Tuple
 
+from deprecated import deprecated
+
 from seito.monad.opt import opt, Some, Empty, err
 
 E = TypeVar("E", bound=Exception)
 T = TypeVar("T")
 
 
+@deprecated(reason="Use 'opt_from_call' instead, from the opt module")
 @dataclass
 class Try:
     f: Callable[..., T]
@@ -37,6 +40,7 @@ def attempt(*args, **kwargs):
 try_ = attempt
 
 
+@deprecated(reason="Use 'opt_from_call' instead, from the opt module")
 def attempt_to(errors=(Exception,)):
     def wrapper(f):
         try_ = Try(f=f, errors=errors)

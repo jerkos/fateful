@@ -2,7 +2,7 @@ from asyncio import iscoroutinefunction
 from typing import Awaitable, Callable, Any
 
 from aflowey import aflow, partial, CANCEL_FLOW
-from aflowey.single_executor import _exec
+from aflowey.single_executor import _exec as exec_f
 from fn.op import flip
 from loguru import logger
 
@@ -11,7 +11,7 @@ from seito.monad.opt import T, Option, opt, When, Default, unravel_opt
 
 def breaker_wrapper(f):
     async def w(*args, **kwargs):
-        value = await _exec(f, *args, **kwargs)
+        value = await exec_f(f, *args, **kwargs)
         if value is None:
             return CANCEL_FLOW
         return value
@@ -26,12 +26,12 @@ class AsyncOption(Option):
         self.kwargs = kwargs
         self._mappers = []
 
-    def _inner(self, value):
+    @staticmethod
+    def _inner(value):
         return unravel_opt(value)
 
     async def _compute_flow(self):
         mappers = [(self._under, self.args, self.kwargs), *self._mappers]
-        logger.debug(mappers)
         flow = aflow.empty()
         for (f, a, kw) in mappers:
             flow = flow >> breaker_wrapper(partial(f, *a, **kw))

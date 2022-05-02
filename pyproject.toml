@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "seito"
-version = "0.1.1"
+version = "0.1.2"
 description = "Functional helpers"
 authors = ["Marc <marc@synapse-medicine.com>"]
 readme = 'README.md'  # Markdown files are supported
@@ -12,6 +12,7 @@ aflowey = "^0.1.1"
 aiohttp = "^3.8.1"
 pampy = "^0.3.0"
 click = "8.0.2"
+Deprecated = "^1.2.13"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"

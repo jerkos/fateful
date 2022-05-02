@@ -76,6 +76,19 @@ value = translate("Marco")
 opt(value).map(
 ```
 
+## Lift known function to handle optional
+
+```python linenums="1"
+from seito import lift_opt
+
+# function which throws an error
+def divide(a, b):
+    return a / b
+    
+lifted_fn = lift_opt(divide)
+
+val  = lifted_fn(1, 0).or_else(0)
+```
 
 
 
