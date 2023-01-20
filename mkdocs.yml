@@ -2,6 +2,9 @@ site_name: Seito
 repo_url: https://github.com/jerkos/seito
 repo_name: seito
 theme:
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
   name: material
   palette:
     - scheme: default
@@ -21,3 +24,26 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
+
+plugins:
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          rendering:
+            show_source: true
+
+nav:
+  - Getting started: index.md
+  - Optional:
+    - Sync optional: optional/sync-optional.md
+    - Async optional: optional/async-optional.md
+  - Http helpers: http.md
+  - Json helpers: json.md
+  - API ref:
+      - Sync optional: ref/optional.md
+      - Async optional: ref/async-opt.md
+      - Http: ref/http.md
+      - Json: ref/json-ref.md
+      - Func: ref/func.md
+

@@ -6,7 +6,7 @@ from loguru import logger
 
 from seito.monad.async_opt import aopt
 from seito.monad.func import identity
-from seito.monad.opt import when, Some, _, default, opt
+from seito.monad.opt import when, Some, _, default, opt, Default
 
 
 class A:
@@ -78,7 +78,7 @@ async def test_async_opt():
         await aopt(add_async, 1, 2)
         .map(lambda x: x * 2)
         .map(lambda x: x / 2)
-        .match(when(Some(_)).then(identity), default() >> 1)
+        .match(when(Some).then(identity), default >> 1)
     )
     assert_that(value).is_equal_to(3)
 

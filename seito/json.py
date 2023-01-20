@@ -1,3 +1,4 @@
+import functools
 from typing import Any, List
 
 try:
@@ -6,11 +7,12 @@ except ImportError:
     import json
 from json.decoder import JSONDecodeError
 
-from seito.monad.opt import none, Some, Empty, opt
-from seito.monad.try_ import attempt_to
+from seito.monad.opt import none, Some, Empty, opt, opt_from_call
 
 
 class JsObject(dict):
+    """ """
+
     def __init__(self, *args, **kwargs):
         super(JsObject, self).__init__(*args, **kwargs)
 
@@ -35,10 +37,12 @@ class JsObject(dict):
 
 
 def js(*args, **kwargs):
+    """ """
     return JsObject(*args, **kwargs)
 
 
 def parse(string: str | bytes | bytearray, *, response_class=None, **kwargs: Any):
+    """ """
     value = json.loads(string, **kwargs)
     is_list = isinstance(value, List)
     if response_class is None:
@@ -50,4 +54,4 @@ def parse(string: str | bytes | bytearray, *, response_class=None, **kwargs: Any
     return response_class(**value)
 
 
-try_parse = attempt_to(errors=(JSONDecodeError,))(parse)
+try_parse = functools.partial(opt_from_call, parse, exc=JSONDecodeError)

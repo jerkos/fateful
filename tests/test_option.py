@@ -1,6 +1,7 @@
 import unittest
 from functools import partial
 
+from assertpy import assert_that
 from loguru import logger
 
 from seito.http import HttpException
@@ -17,10 +18,10 @@ from seito.monad.opt import (
     when,
     MatchError,
     default,
-    err, lift_opt,
+    err,
+    lift_opt,
+    _,
 )
-from fn import _
-from seito.monad.opt import _ as __
 
 
 class A:
@@ -51,7 +52,6 @@ class Test(unittest.TestCase):
             option(none_value).map(lambda v: v + 1).get()
         self.assertEqual(option(none_value).map(lambda v: v + 1).or_else(2), 2)
         self.assertEqual(option(one_value).map(lambda v: v + 1).get(), 2)
-        self.assertEqual(option(one_value).map(_ + 1).get(), 2)
 
         uppercase = "VALUE"
         self.assertEqual(
@@ -122,39 +122,49 @@ class Test(unittest.TestCase):
                 print(f"Got {x} code from error")
 
         value = opt("tata").match(
-            when(Some("tata")).then(lambda: "match first"),
-            when(Some(__)).then(lambda x: x * 2),
-            default() >> (partial(raise_error, MatchError())),
+            when(Some).then(lambda x: "match first"),
+            when(Some).then(lambda x: x * 2),
+            default >> (partial(raise_error, MatchError())),
         )
 
-        logger.debug("value: " + value)
+        logger.debug("value: {} ", value)
 
-        value = opt("tata").match(
-            when(Some("tati")).then(lambda: "match first"),
-            when(Some(__)).then(lambda x: x * 2),
-            default() >> (partial(raise_error, MatchError())),
-        )
+        value = None
+        match opt("tata"):
+            case Some("tati"):
+                value = "match first"
+            case Some(val):
+                value = val * 2
+            case _:
+                raise MatchError()
 
         logger.debug("value: " + value)
 
         with self.assertRaises(MatchError):
-            value = opt("tata").match(
-                when(Some("tati")).then(lambda: "match first"),
-                when(Some("tita")).then(lambda x: x * 2),
-                default() >> (partial(raise_error, MatchError())),
-            )
-            logger.debug("value: " + value)
+            match opt("tata"):
+                case Some("tati"):
+                    value = ("match first",)
+                case Some("tita" as p1):
+                    value = p1 * 2
+                case _:
+                    raise MatchError()
 
-        value = opt("tata").match(
-            when(Some("tati")).then(lambda: "match first"),
-            when(Some("tita")).then(lambda x: x * 2),
-            default() >> (lambda: 1),
-        )
+        match opt("tata"):
+            case Some("tati"):
+                value = "match first"
+            case Some("tita" as p1):
+                value = (p1 * 2,)
+            case _:
+                value = 1
 
-        value = opt({1: 5, 2: {3: 12}}).match(
-            Some({__: __, 2: __}) >> (lambda x, y, z: (x, y, z)),
-            default() >> (lambda: None),
-        )
+        assert_that(value).is_equal_to(1)
+
+        match opt({1: 5, 2: {3: 12}}):
+            case Some({1: val1, 2: val2}):
+                value = val1, val2
+            case _:
+                value = None
+        assert_that(value).is_equal_to((5, {3: 12}))
 
         self.assertEqual(none.or_if_falsy(lambda x: x + 1, 1), 2)
 

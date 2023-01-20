@@ -1,37 +1,48 @@
+import functools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, TypeVar, Generic, Callable, NoReturn
 
-import pampy
-from aflowey import lift
-from pampy.pampy import match_dict as pampy_dict_matcher
+from loguru import logger
 
 from seito.monad.func import identity
 
 
 class EmptyError(ValueError):
+    """ """
+
     ...
 
 
 class MatchError(TypeError):
+    """ """
+
     ...
 
 
 def apply(f: Callable[..., Any] | Any = identity, *args: Any, **kwargs: Any) -> Any:
+    """ """
     if callable(f):
         return f(*args, **kwargs)
     return f
 
 
-_ = pampy._
+class Wildcard:
+    pass
+
+
+_ = Wildcard()
 
 
 class When:
+    """ """
+
     def __init__(self, value):
         self.value = value
         self.action = None
 
     def then(self, f):
+        """ """
         self.action = f
         return self
 
@@ -44,6 +55,8 @@ when = When
 
 @dataclass
 class Default:
+    """ """
+
     def __init__(self):
         self.action = None
 
@@ -52,72 +65,82 @@ class Default:
         return self
 
 
-default = Default
+default = Default()
 
 
 class Option(ABC):
+    """ """
+
     @abstractmethod
     def get(self) -> Any:
+        """ """
         ...  # pragma: no cover
 
     @abstractmethod
     def is_empty(self) -> bool:
+        """ """
         ...  # pragma: no cover
 
     @abstractmethod
     def or_else(self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any) -> Any:
+        """ """
         ...  # pragma: no cover
 
     @abstractmethod
     def or_if_falsy(
         self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any
     ) -> Any:
+        """ """
         ...  # pragma: no cover
 
     @abstractmethod
     def or_none(self) -> Any:
+        """ """
         ...  # pragma: no cover
 
     @abstractmethod
     def or_raise(self, exc: Exception | None = None):
+        """ """
         ...  # pragma: no cover
 
     @abstractmethod
     def map(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> "Option":
+        """ """
         ...  # pragma: no cover
 
     @abstractmethod
     def __iter__(self):
+        """ """
         ...  # pragma: no cover
 
     @abstractmethod
     def __getattr__(self, name: str) -> Any:
+        """ """
         ...  # pragma: no cover
 
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any):
+        """ """
         ...  # pragma: no cover
 
     @abstractmethod
     def __str__(self) -> str:
+        """ """
         ...  # pragma: no cover
 
     def __rshift__(self, other) -> When:
+        """ """
         return when(self).then(other)
 
     def match(self, *whens: When | Default):
+        """ """
         for w in whens:
-            if isinstance(w, when):
-                if w.value.__class__ == self.__class__:
-                    match_dict, self_dict = w.value.__dict__, self.__dict__
-                    is_a_match, extracted = pampy_dict_matcher(match_dict, self_dict)
-                    if not is_a_match:
-                        continue
-                    if extracted:
-                        return apply(w.action, *extracted)
-                    return apply(w.action)
-            else:
+            if self.__class__ == w.value or isinstance(w.value, self.__class__):
+                logger.debug("{}, {}", self.__class__, w.value)
+                return apply(w.action, self._under)
+            if isinstance(w.value, Default):
                 return apply(w.action)
+
         raise MatchError(f"No default guard found, enable to match {self}")
 
 
@@ -127,6 +150,10 @@ M = TypeVar("M")
 
 @dataclass
 class Some(Generic[T], Option):
+    """ """
+
+    __match_args__ = ("_under",)
+
     _under: T
 
     def get(self) -> T:
@@ -188,6 +215,8 @@ class Some(Generic[T], Option):
 
 @dataclass
 class Empty(Option):
+    """ """
+
     _under = None
 
     def get(self) -> NoReturn:
@@ -234,6 +263,10 @@ E = TypeVar("E", bound=Exception)
 
 @dataclass
 class Err(Empty, Generic[E]):
+    """ """
+
+    __match_args__ = ("_under",)
+
     _under: E
 
     def __str__(self):
@@ -251,6 +284,7 @@ class Err(Empty, Generic[E]):
 
 
 def unravel_opt(value):
+    """ """
     if not isinstance(value, Option):
         return value
     inst = value._under
@@ -260,6 +294,7 @@ def unravel_opt(value):
 
 
 def option(value: Any) -> Some[Any] | Empty:
+    """ """
     if isinstance(value, Exception):
         return Err(value)
     new_val = unravel_opt(value)
@@ -267,6 +302,7 @@ def option(value: Any) -> Some[Any] | Empty:
 
 
 def opt_from_call(f, *args, **kwargs):
+    """ """
     exc = kwargs.pop("exc", Exception)
     try:
         return opt(f(*args, **kwargs))
@@ -275,7 +311,8 @@ def opt_from_call(f, *args, **kwargs):
 
 
 def lift_opt(f):
-    return lift(f, opt_from_call)
+    """ """
+    return functools.partial(opt_from_call, f)
 
 
 # aliases

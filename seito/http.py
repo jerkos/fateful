@@ -11,6 +11,8 @@ from seito.monad.opt import Err, Some
 
 
 class HttpMethods(str, Enum):
+    """ """
+
     GET = "GET"
     POST = "POST"
     PUT = "PUT"
@@ -20,21 +22,29 @@ class HttpMethods(str, Enum):
 
 
 class ContentType:
+    """ """
+
     value = "Content-Type"
     APPLICATION_JSON = "application/json"
 
 
 class NetworkError(Exception):
+    """ """
+
     ...
 
 
 class HttpException(NetworkError):
+    """ """
+
     def __init__(self, code: int, detail: str):
         self.code = code
         self.detail = detail
 
 
 class NetworkException(NetworkError):
+    """ """
+
     ...
 
 
@@ -47,6 +57,9 @@ async def request(
     response_class: Type[Any] | None = None,
     **kwargs: Any,
 ) -> Some[str | Dict[str, Any]] | Err[NetworkError | ClientError]:
+    """
+    Generic method for making a request
+    """
     try:
         async with session.request(method.value, url, **kwargs) as resp:
             try:

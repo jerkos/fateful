@@ -13,7 +13,7 @@ from seito.monad.opt import Some, _, default, Err
 async def test_request():
     session = aiohttp.ClientSession()
     result = await request(HttpMethods.GET, "https://google.com", session=session)
-    value = result.match(Some(_) >> identity, default() >> None)
+    value = result.match(Some(_) >> identity, default >> None)
     assert_that(value).is_not_none()
 
     result = await aopt(
@@ -26,7 +26,7 @@ async def test_request():
 async def test_request_2():
     async with aiohttp.ClientSession() as session:
         result = await get("https://google.com", session=session)
-        value = result.match(Some(_) >> identity, default() >> None)
+        value = result.match(Some(_) >> identity, default >> None)
         assert_that(value).is_not_none()
 
         result = await get_opt("https://google.com", session=session).get()
