@@ -1,52 +1,49 @@
-from dataclasses import dataclass, field
-from typing import Callable, Any, TypeVar, Tuple
+from typing import Callable, TypeVar, Tuple, Generic, Type
 
-from deprecated import deprecated
+from mypy_extensions import VarArg, KwArg
 
-from seito.monad.opt import opt, Some, Empty, err
+from seito.monad.container import Result, Err
 
-E = TypeVar("E", bound=Exception)
+E = TypeVar("E", bound=Type[Exception])
 T = TypeVar("T")
 
 
-@deprecated(reason="Use 'opt_from_call' instead, from the opt module")
-@dataclass
-class Try:
-    f: Callable[..., T]
-    cb: Callable[[E], Any] = None
-    errors: Tuple[E, ...] = field(default=(Exception,))
+class Try(Generic[T, E]):
+    def __init__(
+        self,
+        f: Callable[..., T],
+        *args: VarArg,
+        errors: tuple[E, ...] = (Exception,),
+        **kwargs: KwArg
+    ):
+        self.f = f
+        self.args = args
+        self.errors: Tuple[E, ...] = errors
+        self.kwargs = kwargs
 
-    def on_error(self, *errors: E, cb: Callable[[E], Any] = lambda: None):
+    def on_error(self, *errors: E):
         if not all(issubclass(e, Exception) for e in errors):
             raise ValueError("Error")
-        self.cb = cb
         self.errors = errors or Exception
         return self
 
-    def __call__(self, *args, **kwargs) -> Some[T] | Empty | Any:
+    def __call__(self) -> Result[T] | Err[E]:
         try:
-            value = self.f(*args, **kwargs)
-            return opt(value)
+            value = self.f(*self.args, **self.kwargs)
         except self.errors as e:
-            if self.cb:
-                return self.cb(e)
-            return err(e)
+            return Err(e)
+        else:
+            return Result(value)
+
+    @staticmethod
+    def of(f, *args, errors=(Exception,), **kwargs) -> Result[T] | Err[E]:
+        return Try(f, *args, errors=errors, **kwargs)()
 
 
-def attempt(*args, **kwargs):
-    return Try(*args, **kwargs)
-
-
-try_ = attempt
-
-
-@deprecated(reason="Use 'opt_from_call' instead, from the opt module")
 def attempt_to(errors=(Exception,)):
     def wrapper(f):
-        try_ = Try(f=f, errors=errors)
-
         def inner(*args, **kwargs):
-            return try_(*args, **kwargs)
+            return Try(f, *args, errors=errors, **kwargs)()
 
         return inner
 

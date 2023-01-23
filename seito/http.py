@@ -1,13 +1,14 @@
 from enum import Enum
 from functools import partial
-from typing import Type, Any, Dict
+from json import JSONDecodeError
+from typing import Type, Any
 
 from aiohttp import ClientSession, ClientError
 from loguru import logger
 
-from seito.json import try_parse
-from seito.monad.async_opt import aopt
-from seito.monad.opt import Err, Some
+from seito.json import try_parse, JsArray, JsObject
+from seito.monad.async_try import async_try
+from seito.monad.container import Err, Result
 
 
 class HttpMethods(str, Enum):
@@ -56,7 +57,9 @@ async def request(
     session: ClientSession,
     response_class: Type[Any] | None = None,
     **kwargs: Any,
-) -> Some[str | Dict[str, Any]] | Err[NetworkError | ClientError]:
+) -> Result[str | dict[str, Any] | JsArray | JsObject] | Err[
+    NetworkError | ClientError | JSONDecodeError
+]:
     """
     Generic method for making a request
     """
@@ -70,7 +73,7 @@ async def request(
                     return Err(HttpException(resp.status, resp_as_text))
                 if is_json:
                     return try_parse(resp_as_text, response_class=response_class)
-                return Some(resp_as_text)
+                return Result(resp_as_text)
             except ClientError as e:  # pragma: no cover
                 logger.error(e)
                 return Err(e)
@@ -80,19 +83,19 @@ async def request(
 
 
 get = partial(request, HttpMethods.GET)
-get_opt = lambda url, **kwargs: aopt(get, url, **kwargs)
+try_get = lambda url, **kwargs: async_try(get, url, **kwargs)
 
 post = partial(request, HttpMethods.POST)
-post_opt = lambda url, **kwargs: aopt(post, url, **kwargs)
+try_post = lambda url, **kwargs: async_try(post, url, **kwargs)
 
 put = partial(request, HttpMethods.PUT)
-put_opt = lambda url, **kwargs: aopt(put, url, **kwargs)
+try_put = lambda url, **kwargs: async_try(put, url, **kwargs)
 
 delete = partial(request, HttpMethods.DELETE)
-delete_opt = lambda url, **kwargs: aopt(delete, url, **kwargs)
+try_delete = lambda url, **kwargs: async_try(delete, url, **kwargs)
 
 patch = partial(request, HttpMethods.PATCH)
-patch_opt = lambda url, **kwargs: aopt(patch, url, **kwargs)
+try_patch = lambda url, **kwargs: async_try(patch, url, **kwargs)
 
 options = partial(request, HttpMethods.OPTIONS)
-options_opt = lambda url, **kwargs: aopt(options, url, **kwargs)
+try_options = lambda url, **kwargs: async_try(options, url, **kwargs)

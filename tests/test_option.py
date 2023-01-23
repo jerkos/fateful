@@ -1,12 +1,22 @@
 import unittest
 from functools import partial
+from typing import Type
 
+import pytest
 from assertpy import assert_that
 from loguru import logger
 
 from seito.http import HttpException
-from seito.monad.func import identity, raise_error, raise_err
-from seito.monad.opt import (
+from seito.monad.func import (
+    identity,
+    raise_error,
+    raise_err,
+    when,
+    default,
+    MatchError,
+    _,
+)
+from seito.monad.container import (
     option,
     none,
     opt,
@@ -14,13 +24,8 @@ from seito.monad.opt import (
     Err,
     Some,
     Empty,
-    opt_from_call,
-    when,
-    MatchError,
-    default,
     err,
     lift_opt,
-    _,
 )
 
 
@@ -96,10 +101,11 @@ class Test(unittest.TestCase):
 
     def test_match(self):
 
-        value = opt_from_call(lambda: 1).get()
+        value = lift_opt(lambda: 1)().get()
         self.assertEqual(value, 1)
 
-        self.assertEqual(opt_from_call(lambda: 1 / 0).or_else(1), 1)
+        with self.assertRaises(ZeroDivisionError):
+            lift_opt(lambda: 1 / 0)().or_else(1)
 
         match opt("tata"):
             case Some():
@@ -122,14 +128,13 @@ class Test(unittest.TestCase):
                 print(f"Got {x} code from error")
 
         value = opt("tata").match(
-            when(Some).then(lambda x: "match first"),
-            when(Some).then(lambda x: x * 2),
+            when(Some(_)).then(lambda x: "match first"),
+            when(Some(_)).then(lambda x: x * 2),
             default >> (partial(raise_error, MatchError())),
         )
 
         logger.debug("value: {} ", value)
 
-        value = None
         match opt("tata"):
             case Some("tati"):
                 value = "match first"
@@ -183,12 +188,10 @@ class Test(unittest.TestCase):
         logger.debug(when(1))
 
         with self.assertRaises(ZeroDivisionError):
-            opt_from_call(lambda: 1 / 0, exc=ZeroDivisionError).or_raise()
+            lift_opt(lambda: 1 / 0)().or_raise()
 
-        with self.assertRaises(ValueError):
-            opt_from_call(lambda: 1 / 0, exc=ZeroDivisionError).or_raise(
-                ValueError("An error occurred")
-            )
+        with self.assertRaises(ZeroDivisionError):
+            lift_opt(lambda: 1 / 0)().or_raise(ValueError("An error occurred"))
 
         with self.assertRaises(ValueError):
             none.or_raise()
@@ -203,8 +206,16 @@ class Test(unittest.TestCase):
             return a / b
 
         lifted = lift_opt(divide)
-        val = lifted(1, 0).or_else(1)
-        self.assertEqual(val, 1)
+        with pytest.raises(ZeroDivisionError):
+            val = lifted(1, 0).or_else(1)
 
         val = lifted(0, 1).or_else(0)
         self.assertEqual(val, 0)
+
+    def test_pampy_match(self):
+        m1, m2 = opt({1: 5, 2: {3: 12}}).match(Some({1: _, 2: _}), default >> (1, 2))
+        assert_that(m1).is_equal_to(5)
+        assert_that(m2).is_equal_to({3: 12})
+
+        val = opt(ValueError).match(Some(Type[ValueError]))
+        logger.debug(val)

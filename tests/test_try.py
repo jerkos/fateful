@@ -1,7 +1,10 @@
-import unittest
+import pytest
+from assertpy import assert_that
+from loguru import logger
 
-from seito import attempt, attempt_to
-from seito.monad.opt import Some
+from seito import attempt_to
+from seito.monad.container import Err, Result
+from seito.monad.try_ import Try
 
 
 def error(x):
@@ -12,33 +15,50 @@ def success(x):
     return x / 1
 
 
-class Test(unittest.TestCase):
-    def test_maybe(self):
-        (attempt(lambda: error(1)).on_error(ZeroDivisionError, cb=lambda e: print(e))())
+def test_maybe():
+    logger.debug(Try.of(lambda: error(1)))
+    result = Try.of(lambda: error(1)).on_error(ZeroDivisionError)()
+    assert_that(result).is_instance_of(Err)
 
-    def test_all(self):
-        value = attempt(lambda: error(1))()
-        print("value: ", value)
 
-    def test_opt(self):
-        value = attempt(lambda: error(1))().or_else("failure here")
-        print("value: ", value)
-        value = attempt(lambda: success(1))().or_else("failure here")
-        print("value: ", value)
+def test_all():
+    result = Try.of(lambda: error(1))()
+    assert_that(result).is_instance_of(Err)
 
-    def test_through(self):
-        value = attempt(error)(1).or_else("failure here")
-        print("value: ", value)
-        value = attempt(success)(1).or_else("failure here")
-        print("value: ", value)
 
-    def test_decorator(self):
-        @attempt_to(errors=(ZeroDivisionError,))
-        def test_error(x):
-            return x / 1
+def test_opt():
+    value = Try.of(lambda: error(1)).or_else("failure here")
+    assert_that(value).is_equal_to("failure here")
+    value = Try.of(lambda: success(1)).or_else("failure here")
+    assert_that(value).is_equal_to(1)
 
-        print("here: ,", test_error(1))
 
-    def test_fail(self):
-        with self.assertRaises(ValueError):
-            attempt(error).on_error(Some)
+def test_through():
+    value = Try.of(error, 1).or_else("failure here")
+    assert_that(value).is_equal_to("failure here")
+    value = Try.of(success, 1).or_else("failure here")
+    assert_that(value).is_equal_to(1)
+
+
+def test_decorator():
+    @attempt_to(errors=(ZeroDivisionError,))
+    def test_error(x):
+        return x / 1
+
+    result = test_error(1)
+    assert_that(result).is_instance_of(Result)
+
+
+def test_fail():
+    with pytest.raises(ZeroDivisionError):
+        Try.of(error, 1).on_error(TypeError).get()
+
+
+def test_none():
+    r = Try.of(lambda x: None, 1)()
+    assert_that(r).is_instance_of(Result)
+
+
+def test_on_error():
+    r = Try(lambda x: x / 0, 1).on_error(ZeroDivisionError)
+    assert_that(r()).is_instance_of(Err)

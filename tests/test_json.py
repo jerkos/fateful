@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 import unittest
+from json import JSONDecodeError
 
-from seito.json import js, try_parse, parse
+from seito.json import js, try_parse, parse, JsObject, JsArray
 
 
 @dataclass
@@ -50,7 +51,18 @@ class Test(unittest.TestCase):
         {"a": "titi"}
       
       """
-        res = try_parse(value)
+        with self.assertRaises(JSONDecodeError):
+            try_parse(value).get()
+        with self.assertRaises(JSONDecodeError):
+            try_parse(value, response_class=Toto).get()
 
-        res = try_parse(value, response_class=Toto)
-        print("value: ", value)
+    def test_parse_array(self):
+        value = """[1, 2, 3, {"a": "12"}]"""
+        result: JsArray = try_parse(value).get()
+        self.assertEqual(result[0], 1)
+        self.assertEqual(result[2], 3)
+        with self.assertRaises(IndexError):
+            result[10]
+
+        self.assertIsInstance(result[3], JsObject)
+        self.assertEqual(result[3].map_to(Toto), Toto(a="12"))

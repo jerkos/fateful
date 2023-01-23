@@ -1,5 +1,8 @@
 import functools
-from typing import Any, List
+from typing import Any, Type, Mapping
+
+from seito.monad.container import Some, Empty, opt, none
+from seito.monad.try_ import Try
 
 try:
     import orjson as json
@@ -7,7 +10,16 @@ except ImportError:
     import json
 from json.decoder import JSONDecodeError
 
-from seito.monad.opt import none, Some, Empty, opt, opt_from_call
+
+class JsArray(list):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __getitem__(self, index: int) -> "JsObject | Any":
+        item = super().__getitem__(index)
+        if isinstance(item, Mapping):
+            return JsObject(**item)
+        return item
 
 
 class JsObject(dict):
@@ -18,6 +30,10 @@ class JsObject(dict):
 
     def stringify(self, **kwargs: Any):
         return json.dumps(self, **kwargs)
+
+    def map_to(self, clazz: Type):
+        """expected a dataclass or a basemodel"""
+        return clazz(**self)
 
     def __getitem__(self, item: str) -> Some[Any] | Empty:
         try:
@@ -44,14 +60,14 @@ def js(*args, **kwargs):
 def parse(string: str | bytes | bytearray, *, response_class=None, **kwargs: Any):
     """ """
     value = json.loads(string, **kwargs)
-    is_list = isinstance(value, List)
+    is_list = isinstance(value, list)
     if response_class is None:
         if is_list:
-            return [js(val) for val in value]
-        return js(value)
+            return JsArray(value)
+        return JsObject(value)
     if is_list:
         return [response_class(**val) for val in value]
     return response_class(**value)
 
 
-try_parse = functools.partial(opt_from_call, parse, exc=JSONDecodeError)
+try_parse = functools.partial(Try.of, parse, errors=(JSONDecodeError,))

@@ -22,24 +22,26 @@ but with async optional we can do this:
 
 ```py
 import asyncio
-from seito.monad.async_opt import aopt
+from seito.monad.async_opt import async_try
+
 
 async def wait_for(value, *, time=100):
     await asyncio.sleep(time)
     return value
 
+
 async def main():
     result = await (
-        aopt(wait_for, "Marco")
-            .map(lambda x: f"Hello {result}")
-            .or_else("unknown")
+        async_try(wait_for, "Marco")
+        .map(lambda x: f"Hello {result}")
+        .or_else("unknown")
     )
     # result is hello Marco
 
     result = await (
-        aopt(wait_for, None)
-            .map(lambda x: f"Hello {result}")
-            .or_else("unknown")
+        async_try(wait_for, None)
+        .map(lambda x: f"Hello {result}")
+        .or_else("unknown")
     )
     # result is unknown
 ```

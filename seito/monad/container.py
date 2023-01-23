@@ -1,11 +1,8 @@
-import functools
-from abc import ABC, abstractmethod
+import abc
 from dataclasses import dataclass
 from typing import Any, TypeVar, Generic, Callable, NoReturn
 
-from loguru import logger
-
-from seito.monad.func import identity
+from seito.monad.func import Matchable, apply
 
 
 class EmptyError(ValueError):
@@ -14,142 +11,94 @@ class EmptyError(ValueError):
     ...
 
 
-class MatchError(TypeError):
+class ContainerCommon(Matchable, abc.ABC):
     """ """
 
-    ...
-
-
-def apply(f: Callable[..., Any] | Any = identity, *args: Any, **kwargs: Any) -> Any:
-    """ """
-    if callable(f):
-        return f(*args, **kwargs)
-    return f
-
-
-class Wildcard:
-    pass
-
-
-_ = Wildcard()
-
-
-class When:
-    """ """
-
-    def __init__(self, value):
-        self.value = value
-        self.action = None
-
-    def then(self, f):
-        """ """
-        self.action = f
-        return self
-
-    def __repr__(self):
-        return repr(self.value)
-
-
-when = When
-
-
-@dataclass
-class Default:
-    """ """
-
-    def __init__(self):
-        self.action = None
-
-    def __rshift__(self, other) -> "Default":
-        self.action = other
-        return self
-
-
-default = Default()
-
-
-class Option(ABC):
-    """ """
-
-    @abstractmethod
+    @abc.abstractmethod
     def get(self) -> Any:
         """ """
         ...  # pragma: no cover
 
-    @abstractmethod
-    def is_empty(self) -> bool:
-        """ """
-        ...  # pragma: no cover
-
-    @abstractmethod
+    @abc.abstractmethod
     def or_else(self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any) -> Any:
         """ """
         ...  # pragma: no cover
 
-    @abstractmethod
+    @abc.abstractmethod
+    def or_none(self) -> Any:
+        """ """
+        ...  # pragma: no cover
+
+    @abc.abstractmethod
+    def or_raise(self, exc: Exception | None = None):
+        """ """
+        ...  # pragma: no cover
+
+    @abc.abstractmethod
+    def for_each(self, f: Callable[..., Any]):
+        ...  # pragma: no cover
+
+    @abc.abstractmethod
+    def map(
+        self, func: Callable[..., Any], *args: Any, **kwargs: Any
+    ) -> "ContainerCommon":
+        """ """
+        ...  # pragma: no cover
+
+    @abc.abstractmethod
+    def __iter__(self):
+        """ """
+        ...  # pragma: no cover
+
+    @abc.abstractmethod
+    def __getattr__(self, name: str) -> Any:
+        """ """
+        ...  # pragma: no cover
+
+    @abc.abstractmethod
+    def __call__(self, *args: Any, **kwargs: Any):
+        """ """
+        ...  # pragma: no cover
+
+    @abc.abstractmethod
+    def __str__(self) -> str:
+        """ """
+        ...  # pragma: no cover
+
+
+class ResultContainer(ContainerCommon, abc.ABC):
+    @abc.abstractmethod
+    def is_result(self):
+        ...
+
+    @abc.abstractmethod
+    def is_error(self):
+        ...
+
+
+class OptionContainer(ContainerCommon, abc.ABC):
+    @abc.abstractmethod
+    def is_some(self):
+        ...
+
+    @abc.abstractmethod
+    def is_empty(self):
+        ...
+
+    @abc.abstractmethod
     def or_if_falsy(
         self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any
     ) -> Any:
         """ """
         ...  # pragma: no cover
 
-    @abstractmethod
-    def or_none(self) -> Any:
-        """ """
-        ...  # pragma: no cover
-
-    @abstractmethod
-    def or_raise(self, exc: Exception | None = None):
-        """ """
-        ...  # pragma: no cover
-
-    @abstractmethod
-    def map(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> "Option":
-        """ """
-        ...  # pragma: no cover
-
-    @abstractmethod
-    def __iter__(self):
-        """ """
-        ...  # pragma: no cover
-
-    @abstractmethod
-    def __getattr__(self, name: str) -> Any:
-        """ """
-        ...  # pragma: no cover
-
-    @abstractmethod
-    def __call__(self, *args: Any, **kwargs: Any):
-        """ """
-        ...  # pragma: no cover
-
-    @abstractmethod
-    def __str__(self) -> str:
-        """ """
-        ...  # pragma: no cover
-
-    def __rshift__(self, other) -> When:
-        """ """
-        return when(self).then(other)
-
-    def match(self, *whens: When | Default):
-        """ """
-        for w in whens:
-            if self.__class__ == w.value or isinstance(w.value, self.__class__):
-                logger.debug("{}, {}", self.__class__, w.value)
-                return apply(w.action, self._under)
-            if isinstance(w.value, Default):
-                return apply(w.action)
-
-        raise MatchError(f"No default guard found, enable to match {self}")
-
 
 T = TypeVar("T")
 M = TypeVar("M")
 
 
-@dataclass
-class Some(Generic[T], Option):
+@dataclass(unsafe_hash=True)
+class Some(ContainerCommon, Generic[T]):
     """ """
 
     __match_args__ = ("_under",)
@@ -158,6 +107,9 @@ class Some(Generic[T], Option):
 
     def get(self) -> T:
         return self._under
+
+    def is_some(self):
+        return True
 
     def is_empty(self) -> bool:
         return False
@@ -179,19 +131,15 @@ class Some(Generic[T], Option):
     def map(
         self, f: Callable[[T, ...], M], *args: Any, **kwargs: Any
     ) -> "Some[M] | Empty":
-        inst = self
-        while isinstance(inst._under, Option):
-            inst = inst._under
-        return opt(apply(f, inst._under, *args, **kwargs))
+        value, _ = unravel_container(self)
+        return opt(apply(f, value, *args, **kwargs))
+
+    def for_each(self, f: Callable[..., Any], *args: Any, **kwargs: Any):
+        return f(*args, **kwargs)
 
     def __iter__(self):
-        under = self._under
-        while under is not None:
-            if isinstance(under, Option):
-                under = under._under
-            else:
-                yield under
-                under = None
+        val, _ = unravel_container(self)
+        yield val
 
     def __getattr__(self, name: str) -> "Some[Any] | Empty | Callable[..., Any]":
         try:
@@ -213,8 +161,8 @@ class Some(Generic[T], Option):
         return f"<Some {str(self._under)}>"
 
 
-@dataclass
-class Empty(Option):
+@dataclass(unsafe_hash=True)
+class Empty(ContainerCommon):
     """ """
 
     _under = None
@@ -222,13 +170,19 @@ class Empty(Option):
     def get(self) -> NoReturn:
         raise EmptyError("Option is empty")
 
-    def is_empty(self) -> bool:
+    @staticmethod
+    def is_some():
+        return False
+
+    @staticmethod
+    def is_empty() -> bool:
         return True
 
     def or_else(self, obj: Callable[..., M] | M, *args: Any, **kwargs: Any) -> M:
         return apply(obj, *args, **kwargs)
 
-    def or_if_falsy(self, obj: Callable[..., M] | M, *args, **kwargs) -> M:
+    @staticmethod
+    def or_if_falsy(obj: Callable[..., M] | M, *args, **kwargs) -> M:
         return apply(obj, *args, **kwargs)
 
     def or_none(self) -> None:
@@ -241,6 +195,9 @@ class Empty(Option):
 
     def map(self, func, *args, **kwargs) -> "Empty":
         return self
+
+    def for_each(self, f: Callable[..., Any], *args: Any, **kwargs: Any):
+        return None
 
     def __iter__(self):
         return self
@@ -255,27 +212,58 @@ class Empty(Option):
         return self
 
     def __str__(self) -> str:
-        return "<Empty >"
+        return "<Empty>"
+
+
+@dataclass(unsafe_hash=True)
+class Result(Some[T], ResultContainer):
+    _under: T | None
+
+    def is_some(self) -> bool:
+        raise NotImplementedError()
+
+    def is_empty(self) -> bool:
+        raise NotImplementedError()
+
+    def is_error(self):
+        return False
+
+    def is_result(self):
+        return True
+
+    def for_each(self, f: Callable[..., Any], *args: Any, **kwargs: Any):
+        return f(*args, **kwargs)
+
+    def __str__(self):
+        return f"<Result {repr(self._under)}>"
 
 
 E = TypeVar("E", bound=Exception)
 
 
-@dataclass
-class Err(Empty, Generic[E]):
+@dataclass(unsafe_hash=True)
+class Err(Empty, ResultContainer, Generic[E]):
     """ """
 
     __match_args__ = ("_under",)
 
     _under: E
 
+    def __post_init__(self):
+        if not issubclass(self._under.__class__, Exception):
+            raise ValueError("Err should carry an exception class")
+
+    def is_error(self):
+        return True
+
+    def is_result(self):
+        return False
+
     def __str__(self):
-        return f"<Err {repr(self._under)} >"
+        return f"<Err {repr(self._under)}>"
 
-    def unwrap(self):
-        return self._under
-
-    recover_with = Empty.or_else
+    def get(self):
+        raise self._under
 
     def or_raise(self, exc: Exception | None = None) -> NoReturn:
         if exc is not None:
@@ -283,39 +271,39 @@ class Err(Empty, Generic[E]):
         raise self._under
 
 
-def unravel_opt(value):
+def unravel_container(value, container=None) -> tuple[Any, ContainerCommon]:
     """ """
-    if not isinstance(value, Option):
-        return value
-    inst = value._under
-    while isinstance(inst, Option):  # pragma: no cover
-        inst = inst._under
-    return inst
+    match value:
+        case Some(under) | Err(under) | Empty(under) | Result(under) as container:
+            return unravel_container(under, container)
+        case _:
+            return value, container
 
 
 def option(value: Any) -> Some[Any] | Empty:
     """ """
-    if isinstance(value, Exception):
-        return Err(value)
-    new_val = unravel_opt(value)
+    new_val, _ = unravel_container(value)
     return none if new_val is None else Some(new_val)
-
-
-def opt_from_call(f, *args, **kwargs):
-    """ """
-    exc = kwargs.pop("exc", Exception)
-    try:
-        return opt(f(*args, **kwargs))
-    except exc:
-        return Err(exc)
 
 
 def lift_opt(f):
     """ """
-    return functools.partial(opt_from_call, f)
+
+    def wrapper(*args, **kwargs):
+        return opt(f(*args, **kwargs))
+
+    return wrapper
 
 
 # aliases
 none = nope = empty = Empty()
 opt = option
 err = Err
+
+OPT_MATCHABLE_CLASSES = {Some, Empty}
+RESULT_MATCHABLE_CLASSES = {Result, Err}
+
+Some.__matchable_classes__ = OPT_MATCHABLE_CLASSES
+Empty.__matchable_classes__ = OPT_MATCHABLE_CLASSES
+Result.__matchable_classes__ = RESULT_MATCHABLE_CLASSES
+Err.__matchable_classes__ = RESULT_MATCHABLE_CLASSES

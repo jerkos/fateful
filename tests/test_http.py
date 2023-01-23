@@ -1,22 +1,21 @@
 import aiohttp
 import pytest
 from assertpy import assert_that
-from loguru import logger
 
-from seito.http import request, HttpMethods, get, get_opt
-from seito.monad.async_opt import aopt
-from seito.monad.func import identity
-from seito.monad.opt import Some, _, default, Err
+from seito.http import request, HttpMethods, get, try_get
+from seito.monad.async_try import async_try
+from seito.monad.container import Some, Err, Result
+from seito.monad.func import identity, default, _
 
 
 @pytest.mark.asyncio
 async def test_request():
     session = aiohttp.ClientSession()
     result = await request(HttpMethods.GET, "https://google.com", session=session)
-    value = result.match(Some(_) >> identity, default >> None)
+    value = result.match(Result(_) >> identity, default >> None)
     assert_that(value).is_not_none()
 
-    result = await aopt(
+    result = await async_try(
         request, HttpMethods.GET, "https://google.com", session=session
     ).get()
     await session.close()
@@ -26,10 +25,10 @@ async def test_request():
 async def test_request_2():
     async with aiohttp.ClientSession() as session:
         result = await get("https://google.com", session=session)
-        value = result.match(Some(_) >> identity, default >> None)
+        value = result.match(Result(_) >> identity, default >> None)
         assert_that(value).is_not_none()
 
-        result = await get_opt("https://google.com", session=session).get()
+        result = await try_get("https://google.com", session=session).get()
         assert_that(result).is_not_none()
 
 
