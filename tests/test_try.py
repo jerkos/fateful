@@ -1,10 +1,11 @@
+import logging
+
 import pytest
 from assertpy import assert_that
-from loguru import logger
 
 from seito import attempt_to
-from seito.monad.container import Err, Result
-from seito.monad.try_ import Try
+from seito.monad.result import Err, Result
+from seito.try_ import Try
 
 
 def error(x):
@@ -16,7 +17,7 @@ def success(x):
 
 
 def test_maybe():
-    logger.debug(Try.of(lambda: error(1)))
+    logging.debug(Try.of(lambda: error(1)))
     result = Try.of(lambda: error(1)).on_error(ZeroDivisionError)()
     assert_that(result).is_instance_of(Err)
 
@@ -62,3 +63,38 @@ def test_none():
 def test_on_error():
     r = Try(lambda x: x / 0, 1).on_error(ZeroDivisionError)
     assert_that(r()).is_instance_of(Err)
+
+    assert_that(Try.of(lambda x: x / 0, 1).recover(1).get()).is_equal_to(1)
+
+    assert_that(Try.of(lambda x: x / 1, 1).recover(100).get()).is_equal_to(1)
+
+
+def tests_misc():
+    assert_that(Result(1).or_none()).is_equal_to(1)
+    assert_that(Result(1).map(lambda x: x * 2).get()).is_equal_to(2)
+    assert_that(Result(1).toto.or_else(1)).is_equal_to(1)
+    assert_that(Err(ValueError()).unwrap()).is_instance_of(ValueError)
+    assert_that(Err(ValueError()).is_error()).is_true()
+    assert_that(Err(ValueError()).is_result()).is_false()
+
+    class A:
+        a: int = 1
+
+        def method(self):
+            return 1
+    assert_that(Result(A()).method().get()).is_equal_to(1)
+    assert_that(Result(A()).a.get()).is_equal_to(1)
+
+    with pytest.raises(ValueError):
+        Err(ValueError()).or_raise()
+
+    with pytest.raises(TypeError):
+        Err(ValueError()).or_raise(TypeError())
+    with pytest.raises(ValueError):
+        Err(ValueError()).map(lambda x: 1).get()
+
+    for _ in Err(ValueError()):
+        value = "Passed"
+    else:
+        value = "Not passed"
+    assert_that(value).is_equal_to("Not passed")

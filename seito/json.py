@@ -1,13 +1,15 @@
 import functools
-from typing import Any, Type, Mapping
+import typing
+from typing import Any, Type, Mapping, Callable
 
-from seito.monad.container import Some, Empty, opt, none
-from seito.monad.try_ import Try
+from seito.monad.option import opt, none, OptionContainer
+from seito.monad.result import Result, Err
+from seito.try_ import Try
 
 try:
-    import orjson as json
+    import orjson as json  # type: ignore
 except ImportError:
-    import json
+    import json  # type: ignore
 from json.decoder import JSONDecodeError
 
 
@@ -15,7 +17,15 @@ class JsArray(list):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __getitem__(self, index: int) -> "JsObject | Any":
+    @typing.overload
+    def __getitem__(self, index: typing.SupportsIndex) -> Any:  # pragma: no cover
+        ...
+
+    @typing.overload
+    def __getitem__(self, index: slice) -> list:  # pragma: no cover
+        ...
+
+    def __getitem__(self, index):
         item = super().__getitem__(index)
         if isinstance(item, Mapping):
             return JsObject(**item)
@@ -35,14 +45,14 @@ class JsObject(dict):
         """expected a dataclass or a basemodel"""
         return clazz(**self)
 
-    def __getitem__(self, item: str) -> Some[Any] | Empty:
+    def __getitem__(self, item: str) -> OptionContainer[Any | None]:
         try:
             v = super(JsObject, self).__getitem__(item)
             return opt(v)
         except KeyError:
             return none
 
-    def __getattr__(self, item: str) -> Some[Any] | Empty:
+    def __getattr__(self, item: str) -> OptionContainer[Any | None]:
         return self[item]
 
     def __setattr__(self, key, value):
@@ -70,4 +80,6 @@ def parse(string: str | bytes | bytearray, *, response_class=None, **kwargs: Any
     return response_class(**value)
 
 
-try_parse = functools.partial(Try.of, parse, errors=(JSONDecodeError,))
+try_parse: Callable[..., Result[Any] | Err[Exception]] = functools.partial(
+    Try.of, parse, errors=(JSONDecodeError,)
+)

@@ -36,7 +36,7 @@ class Test(unittest.TestCase):
       ]
       """
 
-        resp = parse(value)
+        parse(value)
 
         value = parse(value, response_class=Toto)
         print(value)

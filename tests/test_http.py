@@ -3,9 +3,9 @@ import pytest
 from assertpy import assert_that
 
 from seito.http import request, HttpMethods, get, try_get
-from seito.monad.async_try import async_try
-from seito.monad.container import Some, Err, Result
+from seito.monad.async_result import async_try
 from seito.monad.func import identity, default, _
+from seito.monad.result import Result, Err
 
 
 @pytest.mark.asyncio

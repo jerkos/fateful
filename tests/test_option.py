@@ -1,12 +1,13 @@
+import logging
 import unittest
 from functools import partial
 from typing import Type
 
 import pytest
 from assertpy import assert_that
-from loguru import logger
 
 from seito.http import HttpException
+from seito.monad.container import EmptyError
 from seito.monad.func import (
     identity,
     raise_error,
@@ -16,17 +17,8 @@ from seito.monad.func import (
     MatchError,
     _,
 )
-from seito.monad.container import (
-    option,
-    none,
-    opt,
-    EmptyError,
-    Err,
-    Some,
-    Empty,
-    err,
-    lift_opt,
-)
+from seito.monad.option import none, option, opt, lift_opt, Some, Empty
+from seito.monad.result import Err, Result
 
 
 class A:
@@ -107,7 +99,7 @@ class Test(unittest.TestCase):
         with self.assertRaises(ZeroDivisionError):
             lift_opt(lambda: 1 / 0)().or_else(1)
 
-        match opt("tata"):
+        match opt("tata"):  # noqa: E999
             case Some():
                 print("Is Some")
             case Err(e):
@@ -121,7 +113,7 @@ class Test(unittest.TestCase):
             case Err(e):
                 raise e
             case Empty():
-                logger.debug("Empty")
+                logging.debug("Empty")
 
         match Err(HttpException(400, detail="toto")):
             case Err(HttpException(code=x)):
@@ -133,7 +125,7 @@ class Test(unittest.TestCase):
             default >> (partial(raise_error, MatchError())),
         )
 
-        logger.debug("value: {} ", value)
+        logging.debug("value: {} ", value)
 
         match opt("tata"):
             case Some("tati"):
@@ -143,7 +135,7 @@ class Test(unittest.TestCase):
             case _:
                 raise MatchError()
 
-        logger.debug("value: " + value)
+        logging.debug("value: " + value)
 
         with self.assertRaises(MatchError):
             match opt("tata"):
@@ -176,16 +168,16 @@ class Test(unittest.TestCase):
         with self.assertRaises(EmptyError):
             none.or_raise(EmptyError())
 
-        err(EmptyError()).unwrap()
+        # err(EmptyError()).get()
 
-        logger.debug(option(EmptyError()))
+        logging.debug(option(EmptyError()))
 
         self.assertIs(none.or_none(), None)
 
         with self.assertRaises(MatchError):
             none.match(Some(_) >> identity)
 
-        logger.debug(when(1))
+        logging.debug(when(1))
 
         with self.assertRaises(ZeroDivisionError):
             lift_opt(lambda: 1 / 0)().or_raise()
@@ -218,4 +210,13 @@ class Test(unittest.TestCase):
         assert_that(m2).is_equal_to({3: 12})
 
         val = opt(ValueError).match(Some(Type[ValueError]))
-        logger.debug(val)
+        logging.debug(val)
+
+        assert_that(Some(1).is_some()).is_true()
+        assert_that(none.is_some()).is_false()
+
+        val = opt(1).match(Some(2) >> identity, default >> (lambda: 100))
+        assert_that(val).is_equal_to(100)
+
+        with pytest.raises(MatchError):
+            opt(1).match(Result(_) >> identity)

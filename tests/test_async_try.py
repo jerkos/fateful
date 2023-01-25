@@ -2,11 +2,11 @@ import asyncio
 
 import pytest
 from assertpy import assert_that
-from loguru import logger
 
-from seito.monad.async_try import async_try, AsyncTry
-from seito.monad.container import opt, Result
-from seito.monad.func import when, identity, default, _
+from seito.monad.async_result import async_try, AsyncResult, lift_future
+from seito.monad.func import default, _
+from seito.monad.option import opt
+from seito.monad.result import Result
 
 
 class A:
@@ -50,11 +50,10 @@ async def test_async_opt():
 
     value = await async_try(async_none)().or_else(1)
     assert_that(value).is_equal_to(None)
-    #
-    #
+
     value = await async_try(add_async)(1, 2).map(lambda x: x * 2).get()
     assert_that(value).is_equal_to(6)
-    #
+
     value = (
         await async_try(add_async)(1, 2).map(lambda x: x * 2).map(lambda x: x / 2).get()
     )
@@ -62,11 +61,12 @@ async def test_async_opt():
     #
     value = (
         await async_try(async_none)()
-        .map(lambda x: x * 2)
-        .map(lambda x: x / 2)
+        .map(lambda x: 2)
+        .map(lambda x: 4)
         .or_else(1)
     )
-    assert_that(value).is_equal_to(1)
+    assert_that(value).is_equal_to(4)
+
     #
     async for __ in async_try(async_none):
         ...
@@ -74,18 +74,18 @@ async def test_async_opt():
         value = "Not passed"
 
     assert_that(value).is_equal_to("Not passed")
+
     #
     async for val in async_try(add_async, 1, 2):
         value = val
     assert_that(value).is_equal_to(3)
     #
     value = (
-        await AsyncTry.of(add_async, 1, 2)
+        await AsyncResult.of(add_async, 1, 2)
         .map(lambda x: x * 2)
         .map(lambda x: x / 2)
         .match(Result(_), default >> 1)
     )
-    logger.debug(value)
     assert_that(value).is_equal_to(3.0)
 
     assert_that(await async_try(add_async, 1, 2).is_error()).is_false()
@@ -106,7 +106,7 @@ async def test_async_opt():
     ).is_equal_to(1)
     #
     async for val in async_try(async_identity)(1):
-        logger.debug(val)
+        assert_that(val).is_equal_to(1)
     #
     assert_that(await async_try(async_raise).or_else(lambda: 1)).is_equal_to(1)
     #
@@ -116,7 +116,7 @@ async def test_async_opt():
     #
     assert_that(await async_try(async_a).y.or_else(1)).is_equal_to(1)
 
-    value = await AsyncTry.of(async_raise).on_error(ZeroDivisionError).or_none()
+    value = await AsyncResult.of(async_raise).on_error(ZeroDivisionError).or_none()
     assert_that(value).is_none()
 
     assert_that(await async_try(async_identity, 1).is_result()).is_true()
@@ -124,3 +124,17 @@ async def test_async_opt():
     v = []
     await async_try(async_identity, 1).for_each(lambda r: v.append(r))
     assert_that(v).is_equal_to([1])
+
+    @lift_future
+    async def test_async(a, b) -> float:
+        await asyncio.sleep(0.1)
+        return a / b
+
+    assert_that(await test_async(1, 1).get()).is_equal_to(1.0)
+    assert_that(await test_async(1, 0).recover(1).get()).is_equal_to(1)
+    assert_that(await test_async(1, 0).map(lambda x: x + 1).recover(1).get()).is_equal_to(1)
+
+    with pytest.raises(TypeError):
+        @lift_future
+        def test_async(a, b) -> float:
+            return a / b

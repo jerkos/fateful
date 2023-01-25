@@ -1,16 +1,17 @@
+import abc
 from dataclasses import dataclass
-from typing import Any, Callable, Protocol, TypeVar, Type
+from typing import Any, Callable
 
-from loguru import logger
-from pampy.pampy import match_dict as pampy_dict_matcher
-from pampy import _ as __
+# noinspection PyProtectedMember
+from pampy import _ as __  # type: ignore
+from pampy.pampy import match_dict as pampy_dict_matcher  # type: ignore
 
 _ = __
 
 
 def flip(f):
     flipper = getattr(f, "__flipback__", None)
-    if flipper is not None:
+    if flipper is not None:  # pragma: no cover
         return flipper
 
     def _flipper(a, b):
@@ -34,7 +35,7 @@ def raise_err(err):
     return inner
 
 
-def raise_error(error: Exception):
+def raise_error(error: Exception):  # pragma: no cover
     """ """
     raise error
 
@@ -55,7 +56,7 @@ def apply(f: Callable[..., Any] | Any = identity, *args: Any, **kwargs: Any) -> 
 class When:
     """ """
 
-    def __init__(self, value: "Matchable"):
+    def __init__(self, value: "Matchable | Any"):
         self.value: "Matchable" = value
         self.action: Callable[["Matchable"], Any] | None = None
 
@@ -86,15 +87,9 @@ class Default:
 default = Default()
 
 
-T = TypeVar("T")
+class Matchable(abc.ABC):
+    __matchable_classes__: set[Any] = set()
 
-
-class ContainerProtocol(Protocol):
-    _under: Any
-    __matchable_classes__: set[Type]
-
-
-class Matchable(ContainerProtocol):
     def __rshift__(self, other) -> When:
         """ """
         return When(self).then(other)
@@ -102,7 +97,7 @@ class Matchable(ContainerProtocol):
     def match(self, *whens: "When | Default | Matchable"):
         for w in whens:
             if isinstance(w, Default):
-                return w.action
+                return apply(w.action)
 
             when_inst = w
             if not isinstance(when_inst, When):
@@ -114,13 +109,13 @@ class Matchable(ContainerProtocol):
 
                 if clazz not in self.__matchable_classes__:
                     raise MatchError(
-                        f"Incompatible match class found: {when_inst.value} not in {self.__matchable_classes__}"
+                        f"Incompatible match class found: {when_inst.value} "
+                        f"not in {self.__matchable_classes__}"
                     )
 
                 if clazz == self.__class__:
                     match_dict, self_dict = when_inst.value.__dict__, self.__dict__
                     is_a_match, extracted = pampy_dict_matcher(match_dict, self_dict)
-                    logger.debug("{}, {}", is_a_match, extracted)
                     if not is_a_match:
                         continue
                     if when_inst.action is None:
