@@ -33,7 +33,7 @@ nav:
   - Containers:
     - Optional: containers/optional.md
     - Result: containers/optional.md
-    - Async result: optional/async-optional.md
+    - Async result: containers/async-optional.md
   - Http helpers: http.md
   - Json helpers: json.md
   - API ref:
