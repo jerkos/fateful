@@ -1,1 +1,1 @@
-::: seito.monad.async_opt
+::: seito.monad.async_result

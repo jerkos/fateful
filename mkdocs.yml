@@ -2,9 +2,9 @@ site_name: Seito
 repo_url: https://github.com/jerkos/seito
 repo_name: seito
 theme:
-  features:
-    - navigation.tabs
-    - navigation.tabs.sticky
+  #features:
+  #  - navigation.tabs
+  # - navigation.tabs.sticky
   name: material
   palette:
     - scheme: default
@@ -35,9 +35,10 @@ plugins:
 
 nav:
   - Getting started: index.md
-  - Optional:
-    - Sync optional: optional/sync-optional.md
-    - Async optional: optional/async-optional.md
+  - Containers:
+    - Optional: containers/optional.md
+    - Result: containers/optional.md
+    - Async result: optional/async-optional.md
   - Http helpers: http.md
   - Json helpers: json.md
   - API ref:

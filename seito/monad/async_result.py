@@ -1,7 +1,7 @@
 import asyncio
 import functools
 from inspect import isawaitable
-from typing import Callable, Any, TypeVar, Type, Coroutine, NoReturn
+from typing import Callable, Any, Type, NoReturn, Awaitable
 
 from seito.monad.container import (
     unravel_container,
@@ -20,19 +20,16 @@ async def _exec(function: Callable[..., Any], *a: Any, **kw: Any) -> Any:
     return current_result
 
 
-T = TypeVar("T")
-
-
-class AsyncResult(ResultContainer[T]):
+class AsyncResult(ResultContainer[Awaitable]):
     """ """
 
     def __init__(
         self,
-        aws: Callable[..., Coroutine[Any, Any, T]],
+        aws: Awaitable,
         *args: Any,
         **kwargs: Any,
     ):
-        self.aws = aws
+        self._under = aws
         self.args = args
         self.kwargs = kwargs
         self.errors: tuple[Type[Exception], ...] = (Exception,)
@@ -44,7 +41,7 @@ class AsyncResult(ResultContainer[T]):
         self.errors = errors or (Exception,)
         return self
 
-    def __call__(self, *args, **kwargs) -> "AsyncResult[T]":
+    def __call__(self, *args, **kwargs) -> "AsyncResult":
         self.args = args
         self.kwargs = kwargs
         return self
@@ -59,9 +56,9 @@ class AsyncResult(ResultContainer[T]):
         else:
             return Result(r)
 
-    async def _execute(self) -> Result[T] | Err[Exception]:
+    async def _execute(self) -> Result[Any] | Err[Exception]:
         """ """
-        result = await self._exc_step(self.aws, *self.args, **self.kwargs)
+        result = await self._exc_step(self._under, *self.args, **self.kwargs)
         match result:  # noqa: E999
             case Err():
                 is_error = True
@@ -79,8 +76,13 @@ class AsyncResult(ResultContainer[T]):
                 # not on error execute new mapper on current holding value
                 result = await self._exc_step(f, result.get(), *a, _is_recover=is_recover, **kw)
         else:
-            print(result, is_error)
             return result
+
+    async def execute(self) -> Result[Any] | Err[Exception]:
+        result = await self._execute()
+        container: Result[Any] | Err[Exception]
+        _, container = unravel_container(result)
+        return container
 
     async def is_result(self):
         return (await self._execute()).is_result()
@@ -88,15 +90,16 @@ class AsyncResult(ResultContainer[T]):
     async def is_error(self):
         return (await self._execute()).is_error()
 
-    async def _execute_or_clause_if(self, predicate, or_f, *args, **kwargs) -> T:
+    async def _execute_or_clause_if(self, predicate, or_f, *args, **kwargs) -> Any:
         """ """
         result = await self._execute()
         if predicate(result):
             return await _exec(or_f, *args, **kwargs)
+        container: Result[Any] | Err[Exception]
         _, container = unravel_container(result)
         return container.get()
 
-    def map(self, func: Func, *args: Any, **kwargs: Any) -> "AsyncResult[T]":
+    def map(self, func: Func, *args: Any, **kwargs: Any) -> "AsyncResult":
         """ """
         self._mappers.append((func, args, kwargs, False))
         return self
@@ -108,7 +111,7 @@ class AsyncResult(ResultContainer[T]):
 
     def recover(
         self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any
-    ) -> "AsyncResult[T]":
+    ) -> "AsyncResult":
         self._mappers.append((obj, args, kwargs, True))
         return self
 
@@ -124,7 +127,7 @@ class AsyncResult(ResultContainer[T]):
         _, container = unravel_container(result)
         return result.or_none()
 
-    async def or_else(self, obj: Func | Any, *args: Any, **kwargs: Any) -> T:
+    async def or_else(self, obj: Func | Any, *args: Any, **kwargs: Any) -> Any:
         """ """
 
         def check_value(step_result: Any):
@@ -132,9 +135,10 @@ class AsyncResult(ResultContainer[T]):
 
         return await self._execute_or_clause_if(check_value, obj, *args, **kwargs)
 
-    async def or_raise(self, exc: Exception | None = None) -> T | NoReturn:
+    async def or_raise(self, exc: Exception | None = None) -> Any | NoReturn:
         """ """
         result = await self._execute()
+        container: Result[Any] | Err[Exception]
         _, container = unravel_container(result)
         return container.or_raise(exc)
 
@@ -160,6 +164,7 @@ class AsyncResult(ResultContainer[T]):
     async def match(self, *whens: When | Default | Matchable):
         """ """
         result = await self._execute()
+        container: Result[Any] | Err[Exception]
         _, container = unravel_container(result)
         return container.match(*whens)
 

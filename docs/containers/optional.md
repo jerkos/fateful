@@ -34,7 +34,7 @@ for i in a:
 ```
 
 ## Forwarding value
-One funny things is that you can forward a computation, like this
+One funny thing is that you can forward a computation, like this
 
 ```py linenums="1"
 from seito import opt

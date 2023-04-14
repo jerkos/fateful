@@ -50,11 +50,6 @@ class CommonContainer(Matchable, MappableContainer[T_wrapped_type], abc.ABC):
         """ """
         ...  # pragma: no cover
 
-    #@abc.abstractmethod
-    #def map(self, func: Callable[[T_wrapped_type], Any]) -> "CommonContainer[Any]":
-    #    """ """
-    #    ...  # pragma: no cover
-
     @abc.abstractmethod
     def __iter__(self) -> "Iterator[T_wrapped_type | CommonContainer[T_wrapped_type]]":
         """ """
@@ -76,7 +71,10 @@ class CommonContainer(Matchable, MappableContainer[T_wrapped_type], abc.ABC):
         ...  # pragma: no cover
 
 
-def unravel_container(value, container=None) -> tuple[Any, CommonContainer]:
+TContainer = TypeVar("TContainer", bound=CommonContainer)
+
+
+def unravel_container(value, container=None) -> tuple[Any, TContainer]:
     """ """
     match value:  # noqa: E999
         case CommonContainer(under) as container:
