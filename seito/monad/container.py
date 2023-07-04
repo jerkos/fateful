@@ -1,5 +1,5 @@
 import abc
-from typing import Any, TypeVar, Callable, NoReturn, Iterator, Generic
+import typing as t
 
 from seito.monad.func import Matchable
 
@@ -10,58 +10,67 @@ class EmptyError(ValueError):
     ...
 
 
-T_wrapped_type = TypeVar("T_wrapped_type")
+T_input_mappable = t.TypeVar("T_input_mappable", covariant=True)
+T_output_mappable = t.TypeVar("T_output_mappable")
+P = t.ParamSpec("P")
 
-Func = Callable[..., Any]
 
-
-class MappableContainer(Generic[T_wrapped_type], abc.ABC):
-    @abc.abstractmethod
-    def map(self, func: Callable[[T_wrapped_type], Any]) -> Any:  # pragma: no cover
+class MappableContainer(t.Protocol[T_input_mappable]):
+    def map(
+        self, fn: t.Callable[[T_input_mappable], T_output_mappable]
+    ) -> T_output_mappable:  # pragma: no cover
         ...
 
 
-class CommonContainer(Matchable, MappableContainer[T_wrapped_type], abc.ABC):
+T_input = t.TypeVar("T_input", covariant=True)
+T_output = t.TypeVar("T_output")
+
+
+class CommonContainer(Matchable, MappableContainer[T_input], t.Protocol):
     """ """
 
     __match_args__ = ("_under",)
 
-    _under: T_wrapped_type
-
     @abc.abstractmethod
-    def get(self) -> T_wrapped_type | NoReturn:
+    def get(self) -> T_input | t.NoReturn:
         """ """
         ...  # pragma: no cover
+
+    @abc.abstractmethod
+    def or_(obj: T_output) -> T_input | T_output:
+        ...
 
     @abc.abstractmethod
     def or_else(
-        self, obj: Func | Any, *args: Any, **kwargs: Any
-    ) -> T_wrapped_type | Any:
+        self, obj: t.Callable[P, T_output], *args: P.args, **kwargs: P.kwargs
+    ) -> T_input | T_output:
+        """ """
+        ...  # pragma: no cover
+
+    unwrap_or = or_else
+
+    @abc.abstractmethod
+    def or_none(self) -> T_input | None:
         """ """
         ...  # pragma: no cover
 
     @abc.abstractmethod
-    def or_none(self) -> T_wrapped_type | None:
+    def or_raise(self, exc: Exception | None = None) -> T_input | t.NoReturn:
         """ """
         ...  # pragma: no cover
 
     @abc.abstractmethod
-    def or_raise(self, exc: Exception | None = None) -> T_wrapped_type | NoReturn | Any:
+    def __iter__(self) -> "t.Iterator[T_input | CommonContainer[T_input]]":
         """ """
         ...  # pragma: no cover
 
     @abc.abstractmethod
-    def __iter__(self) -> "Iterator[T_wrapped_type | CommonContainer[T_wrapped_type]]":
+    def __getattr__(self, name: str) -> t.Any:
         """ """
         ...  # pragma: no cover
 
     @abc.abstractmethod
-    def __getattr__(self, name: str) -> Any:
-        """ """
-        ...  # pragma: no cover
-
-    @abc.abstractmethod
-    def __call__(self, *args: Any, **kwargs: Any):
+    def __call__(self, *args: t.Any, **kwargs: t.Any):
         """ """
         ...  # pragma: no cover
 
@@ -69,15 +78,3 @@ class CommonContainer(Matchable, MappableContainer[T_wrapped_type], abc.ABC):
     def __str__(self) -> str:
         """ """
         ...  # pragma: no cover
-
-
-TContainer = TypeVar("TContainer", bound=CommonContainer)
-
-
-def unravel_container(value, container=None) -> tuple[Any, TContainer]:
-    """ """
-    match value:  # noqa: E999
-        case CommonContainer(under) as container:
-            return unravel_container(under, container)
-        case _:
-            return value, container

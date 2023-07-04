@@ -1,8 +1,9 @@
-from dataclasses import dataclass
+import typing
 import unittest
+from dataclasses import dataclass
 from json import JSONDecodeError
 
-from seito.json import js, try_parse, parse, JsObject, JsArray
+from seito.json import JsArray, JsObject, js, parse, try_parse
 
 
 @dataclass
@@ -14,13 +15,13 @@ class Test(unittest.TestCase):
     def test_john_object(self):
         i = js({"z-index": 1000})
 
-        self.assertEqual(i["z-index"].or_else(0), 1000)
+        self.assertEqual(i["z-index"].or_(0), 1000)
         i["toto"] = [1, 2, 3]
         i.toto = [4, 5, 6]
-        i.zozo.or_else(12)
+        i.zozo.or_(12)
 
         str(i)
-        self.assertEqual(i["zindex"].or_else(0), 0)
+        self.assertEqual(i["zindex"].or_(0), 0)
         json_obj = js(a=12, k=13, c={1: 3})
         self.assertEqual(json_obj.a.get(), 12)
         # self.assertEqual(i.toto.map(lambda x: x.to_list()).or_none(), [4, 5, 6])
@@ -49,7 +50,7 @@ class Test(unittest.TestCase):
         value = """[
         {"a": "toto"},
         {"a": "titi"}
-      
+
       """
         with self.assertRaises(JSONDecodeError):
             try_parse(value).get()
@@ -58,7 +59,7 @@ class Test(unittest.TestCase):
 
     def test_parse_array(self):
         value = """[1, 2, 3, {"a": "12"}]"""
-        result: JsArray = try_parse(value).get()
+        result: JsArray = typing.cast(JsArray, try_parse(value).get())
         self.assertEqual(result[0], 1)
         self.assertEqual(result[2], 3)
         with self.assertRaises(IndexError):

@@ -1,7 +1,7 @@
 import logging
+import typing
 import unittest
 from functools import partial
-from typing import Type
 
 import pytest
 from assertpy import assert_that
@@ -9,16 +9,16 @@ from assertpy import assert_that
 from seito.http import HttpException
 from seito.monad.container import EmptyError
 from seito.monad.func import (
-    identity,
-    raise_error,
-    raise_err,
-    when,
-    default,
     MatchError,
     _,
+    default,
+    identity,
+    raise_err,
+    raise_error,
+    when,
 )
-from seito.monad.option import none, option, opt, lift_opt, Some, Empty
-from seito.monad.result import Err, Result
+from seito.monad.option import Empty, Some, lift_opt, none, opt, option
+from seito.monad.result import Err, Ok
 
 
 class A:
@@ -29,7 +29,7 @@ class A:
 class Test(unittest.TestCase):
     def test_option_none_get(self):
         with self.assertRaises(EmptyError):
-            r = none.get()
+            none.get()
 
     def test_option_is_empty(self):
         self.assertTrue(none.is_empty())
@@ -38,21 +38,21 @@ class Test(unittest.TestCase):
 
     def test_option_or_else(self):
         value = 1
-        self.assertEqual(none.or_else(value), 1)
+        self.assertEqual(none.or_(value), 1)
         self.assertEqual(none.or_else(lambda: 1), 1)
-        self.assertEqual(option(value).map(lambda v: v + 1).or_else(0), 2)
+        self.assertEqual(option(value).map(lambda v: v + 1).or_(0), 2)
 
     def test_option_map(self):
         none_value = None
         one_value = 1
         with self.assertRaises(ValueError):
             option(none_value).map(lambda v: v + 1).get()
-        self.assertEqual(option(none_value).map(lambda v: v + 1).or_else(2), 2)
+        self.assertEqual(option(none_value).map(lambda v: v + 1).or_(2), 2)
         self.assertEqual(option(one_value).map(lambda v: v + 1).get(), 2)
 
         uppercase = "VALUE"
         self.assertEqual(
-            option(uppercase).map(lambda value: value.lower()).or_else(""), "value"
+            option(uppercase).map(lambda value: value.lower()).or_(""), "value"
         )
 
     def test_option_iteration(self):
@@ -63,14 +63,14 @@ class Test(unittest.TestCase):
 
     def test_option_forwarding(self):
         value = "VALUE"
-        self.assertEqual(option(value).lower().or_else(""), "value")
-        self.assertEqual(none.lower().or_else(""), "")
-        self.assertEqual(none.toto().or_else("titi"), "titi")
-        self.assertEqual(option("TOTO").capitalizes().or_else("t"), "t")
-        self.assertEqual(option("toto").capitalize().or_else("failed"), "Toto")
+        self.assertEqual(option(value).lower().or_(""), "value")
+        self.assertEqual(none.lower().or_(""), "")
+        self.assertEqual(none.toto().or_("titi"), "titi")
+        self.assertEqual(option("TOTO").capitalizes().or_("t"), "t")
+        self.assertEqual(option("toto").capitalize().or_("failed"), "Toto")
         self.assertEqual(option("riri").count("ri").get(), 2)
         self.assertEqual(option(A(5)).x.get(), 5)
-        self.assertEqual(option(A(5)).z.or_else(0), 0)
+        self.assertEqual(option(A(5)).z.or_(0), 0)
         option("value")()
 
     def test_nested_option(self):
@@ -79,25 +79,43 @@ class Test(unittest.TestCase):
             self.assertEqual(n, "tata")
 
     def test_if_false(self):
-        op = opt("value").or_else("")
+        op = opt("value").or_("")
         self.assertEqual(len(op), 5)
         print(option("value").get_or("") is none)
 
         self.assertEqual(opt("value").or_none(), "value")
         self.assertEqual(opt("value").or_raise(ValueError()), "value")
-        self.assertEqual(option([]).or_if_falsy([1, 2, 3]), [1, 2, 3])
+        self.assertEqual(option([]).or_if_falsy(lambda: [1, 2, 3]), [1, 2, 3])
 
     def test_flat_map(self):
-        nested_none = option(option(option("tata"))).map(lambda v: v + "titi").get()
+        nested_none = (
+            option(option(option("tata"))).flatten().map(lambda v: v + "titi").get()
+        )
+        q = Some(Some(1))
+        q.flatten()
+        r = Some(Some(Some(Some(1))))
+        r.flatten()
+        v = option(option(option("tata")))
+        v.flatten()
+        option(option(None))
+
+        v.flatten()
+        z = Some(Some(1))
+        z.flatten().map(lambda v: v + 1).get()
+
+        qq = Some(1)
+        qq.flatten()
+
+        tt = Empty()
+        tt.flat_map()
         self.assertEqual(nested_none, "tatatiti")
 
     def test_match(self):
-
         value = lift_opt(lambda: 1)().get()
         self.assertEqual(value, 1)
 
         with self.assertRaises(ZeroDivisionError):
-            lift_opt(lambda: 1 / 0)().or_else(1)
+            lift_opt(lambda: 1 / 0)().or_(1)
 
         match opt("tata"):  # noqa: E999
             case Some():
@@ -119,7 +137,8 @@ class Test(unittest.TestCase):
             case Err(HttpException(code=x)):
                 print(f"Got {x} code from error")
 
-        value = opt("tata").match(
+        value = opt("tata")
+        value.match(
             when(Some(_)).then(lambda x: "match first"),
             when(Some(_)).then(lambda x: x * 2),
             default >> (partial(raise_error, MatchError())),
@@ -127,11 +146,13 @@ class Test(unittest.TestCase):
 
         logging.debug("value: {} ", value)
 
-        match opt("tata"):
+        t = opt("tata")
+
+        match t:
             case Some("tati"):
                 value = "match first"
             case Some(val):
-                value = val * 2
+                value = typing.cast(str, val) * 2
             case _:
                 raise MatchError()
 
@@ -175,9 +196,7 @@ class Test(unittest.TestCase):
         self.assertIs(none.or_none(), None)
 
         with self.assertRaises(MatchError):
-            none.match(Some(_) >> identity)
-
-        logging.debug(when(1))
+            none.match(Some(_) >> identity)  # type: ignore
 
         with self.assertRaises(ZeroDivisionError):
             lift_opt(lambda: 1 / 0)().or_raise()
@@ -199,17 +218,18 @@ class Test(unittest.TestCase):
 
         lifted = lift_opt(divide)
         with pytest.raises(ZeroDivisionError):
-            val = lifted(1, 0).or_else(1)
+            val = lifted(1, 0).or_(1)
 
-        val = lifted(0, 1).or_else(0)
+        val = lifted(0, 1).or_(0)
         self.assertEqual(val, 0)
 
     def test_pampy_match(self):
-        m1, m2 = opt({1: 5, 2: {3: 12}}).match(Some({1: _, 2: _}), default >> (1, 2))
+        val = opt({1: 5, 2: {3: 12}})
+        m1, m2 = val.match(Some({1: _, 2: _}), default >> (1, 2))
         assert_that(m1).is_equal_to(5)
         assert_that(m2).is_equal_to({3: 12})
 
-        val = opt(ValueError).match(Some(Type[ValueError]))
+        val = opt(ValueError).match(Some(typing.Type[ValueError]))
         logging.debug(val)
 
         assert_that(Some(1).is_some()).is_true()
@@ -219,4 +239,4 @@ class Test(unittest.TestCase):
         assert_that(val).is_equal_to(100)
 
         with pytest.raises(MatchError):
-            opt(1).match(Result(_) >> identity)
+            opt(1).match(Ok(_) >> identity)

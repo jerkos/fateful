@@ -1,119 +1,143 @@
 import asyncio
 import functools
+import typing as t
 from inspect import isawaitable
-from typing import Callable, Any, Type, NoReturn, Awaitable
 
-from seito.monad.container import (
-    unravel_container,
-    Func,
-)
-from seito.monad.func import flip, When, Default, Matchable
-from seito.monad.result import Err, Result, ResultContainer
+from seito.monad.func import Default, Matchable, When, flip
+from seito.monad.result import Err, Ok, ResultContainer, unravel_container
+
+P_mapper = t.ParamSpec("P_mapper")
+P = t.ParamSpec("P")
+U = t.TypeVar("U")
+V = t.TypeVar("V")
+
+T_output = t.TypeVar("T_output")
+T_err = t.TypeVar("T_err", bound=Exception, covariant=True)
 
 
-async def _exec(function: Callable[..., Any], *a: Any, **kw: Any) -> Any:
-    if not callable(function):
-        return function
-    current_result = function(*a, **kw)
+async def _exec(
+    fn: t.Callable[P_mapper, U] | t.Callable[P_mapper, t.Awaitable[U]] | U,
+    *a: P_mapper.args,
+    **kw: P_mapper.kwargs,
+) -> U:
+    if not callable(fn):
+        return t.cast(U, fn)
+    fn = t.cast(t.Callable[P_mapper, U] | t.Callable[P_mapper, t.Awaitable[U]], fn)
+    current_result: U | t.Awaitable[U] = fn(*a, **kw)
     while asyncio.iscoroutine(current_result) or isawaitable(current_result):
         current_result = await current_result
-    return current_result
+    return t.cast(U, current_result)
 
 
-class AsyncResult(ResultContainer[Awaitable]):
+class AsyncResult(
+    ResultContainer[t.Callable[P, t.Awaitable[V]]], t.Generic[P, V, T_err]
+):
     """ """
 
     def __init__(
         self,
-        aws: Awaitable,
-        *args: Any,
-        **kwargs: Any,
+        aws: t.Callable[P, t.Awaitable[V]],
+        *args: P.args,
+        **kwargs: P.kwargs,
     ):
         self._under = aws
         self.args = args
         self.kwargs = kwargs
-        self.errors: tuple[Type[Exception], ...] = (Exception,)
-        self._mappers: list[tuple[Callable[..., Any], Any, Any, bool]] = []
+        self.errors: tuple[type[T_err], ...] = t.cast(
+            tuple[type[T_err], ...], (Exception,)
+        )
 
-    def on_error(self, *errors: Type[Exception]):
-        if not all(issubclass(e, Exception) for e in errors):
-            raise ValueError("Error")
-        self.errors = errors or (Exception,)
+    def on_error(self, errors: tuple[type[T_err], ...]) -> "AsyncResult":
+        self.errors = errors
         return self
 
-    def __call__(self, *args, **kwargs) -> "AsyncResult":
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> "AsyncResult":
         self.args = args
         self.kwargs = kwargs
         return self
 
-    async def _exc_step(self, f, *args: Any, _is_recover: bool = False, **kwargs: Any):
-        if _is_recover is True:
-            return Result(await _exec(f, *args, **kwargs))
+    async def _exec(
+        self,
+        fn: t.Callable[P_mapper, T_output]
+        | t.Callable[P_mapper, t.Awaitable[T_output]]
+        | T_output,
+        *args: P_mapper.args,
+        **kwargs: P_mapper.kwargs,
+    ) -> Ok[T_output] | Err[T_err]:
         try:
-            r = await _exec(f, *args, **kwargs)
-        except self.errors as e:
-            return Err(e)
+            r = await _exec(fn, *args, **kwargs)
+        except Exception as e:
+            for err in self.errors:
+                if isinstance(e, err):
+                    return Err(e)
+            raise
         else:
-            return Result(r)
+            return Ok(r)
 
-    async def _execute(self) -> Result[Any] | Err[Exception]:
-        """ """
-        result = await self._exc_step(self._under, *self.args, **self.kwargs)
-        match result:  # noqa: E999
-            case Err():
-                is_error = True
-            case _:
-                is_error = False
+    async def _execute(self) -> Ok[V] | Err[T_err]:
+        return await self._exec(self._under, *self.args, **self.kwargs)
 
-        for f, a, kw, is_recover in self._mappers:
-            if is_error and not is_recover:
-                # try to find a recover so continue
-                continue
-            elif is_error and is_recover:
-                # execute recover without current holding value
-                result = await self._exc_step(f, *a, _is_recover=is_recover, **kw)
-            else:
-                # not on error execute new mapper on current holding value
-                result = await self._exc_step(f, result.get(), *a, _is_recover=is_recover, **kw)
-        else:
-            return result
-
-    async def execute(self) -> Result[Any] | Err[Exception]:
+    async def execute(self) -> Ok[V] | Err[T_err]:
         result = await self._execute()
-        container: Result[Any] | Err[Exception]
         _, container = unravel_container(result)
         return container
 
-    async def is_result(self):
-        return (await self._execute()).is_result()
+    async def is_ok(self):
+        return (await self._execute()).is_ok()
 
     async def is_error(self):
         return (await self._execute()).is_error()
 
-    async def _execute_or_clause_if(self, predicate, or_f, *args, **kwargs) -> Any:
+    async def _execute_or_clause_if(
+        self,
+        predicate,
+        or_f: t.Callable[P_mapper, T_output]
+        | t.Callable[P_mapper, t.Awaitable[T_output]]
+        | T_output,
+        *args: P_mapper.args,
+        **kwargs: P_mapper.kwargs,
+    ) -> T_output | t.Any:
         """ """
         result = await self._execute()
         if predicate(result):
             return await _exec(or_f, *args, **kwargs)
-        container: Result[Any] | Err[Exception]
         _, container = unravel_container(result)
         return container.get()
 
-    def map(self, func: Func, *args: Any, **kwargs: Any) -> "AsyncResult":
+    def map(
+        self,
+        fn: t.Callable[[V], T_output]
+        | t.Callable[[V], t.Awaitable[T_output]]
+        | T_output,
+    ) -> "AsyncResult[P, T_output, T_err]":
         """ """
-        self._mappers.append((func, args, kwargs, False))
-        return self
 
-    async def for_each(self, f: Func, *args: Any, **kwargs: Any) -> None:
+        async def compose(*args: P.args, **kwargs: P.kwargs) -> T_output:
+            result = await _exec(self._under, *args, **kwargs)
+            result = await _exec(fn, result)
+            return result
+
+        return AsyncResult(compose, *self.args, **self.kwargs)
+
+    async def for_each(self, fn: t.Callable[[V | T_err], None]) -> None:
         result = await self._execute()
         result, _ = unravel_container(result)
-        f(result, *args, **kwargs)
+        fn(result)
 
     def recover(
-        self, obj: Callable[..., Any] | Any, *args: Any, **kwargs: Any
-    ) -> "AsyncResult":
-        self._mappers.append((obj, args, kwargs, True))
-        return self
+        self,
+        obj: t.Callable[P_mapper, V] | t.Callable[P_mapper, t.Awaitable[V]] | V,
+        *a: P_mapper.args,
+        **kw: P_mapper.kwargs,
+    ) -> "AsyncResult[P, V, T_err]":
+        async def compose(*args: P.args, **kwargs: P.kwargs) -> V:
+            try:
+                result = await _exec(self._under, *args, **kwargs)
+            except Exception:
+                result = await _exec(obj, *a, **kw)
+            return result
+
+        return AsyncResult(compose, *self.args, **self.kwargs)
 
     async def get(self):
         """ """
@@ -124,23 +148,34 @@ class AsyncResult(ResultContainer[Awaitable]):
     async def or_none(self):
         """ """
         result = await self._execute()
-        _, container = unravel_container(result)
         return result.or_none()
 
-    async def or_else(self, obj: Func | Any, *args: Any, **kwargs: Any) -> Any:
+    async def or_(self, obj: T_output) -> V | T_output | None:
+        result = await self._execute()
+        _, container = unravel_container(result)
+        return container.or_(obj)
+
+    async def or_else(
+        self,
+        obj: t.Callable[P_mapper, T_output]
+        | t.Callable[P_mapper, t.Awaitable[T_output]],
+        *args: P_mapper.args,
+        **kwargs: P_mapper.kwargs,
+    ) -> T_output:
         """ """
 
-        def check_value(step_result: Any):
+        def check_value(step_result: t.Any):
             return isinstance(step_result, (Err, Exception)) or (step_result is None)
 
         return await self._execute_or_clause_if(check_value, obj, *args, **kwargs)
 
-    async def or_raise(self, exc: Exception | None = None) -> Any | NoReturn:
+    unwrap_or = or_else
+
+    async def or_raise(self, exc: Exception | None = None) -> t.Any | None:
         """ """
         result = await self._execute()
-        container: Result[Any] | Err[Exception]
         _, container = unravel_container(result)
-        return container.or_raise(exc)
+        return container.or_raise(exc if exc is not None else ValueError())
 
     async def __aiter__(self):
         """ """
@@ -156,20 +191,24 @@ class AsyncResult(ResultContainer[Awaitable]):
         """ """
         raise NotImplementedError()  # pragma: no cover
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> "AsyncResult":
         """ """
-        self._mappers.append((functools.partial(flip(getattr)), (name,), {}, False))
-        return self
+
+        async def compose(*args: P.args, **kwargs: P.kwargs) -> t.Any:
+            result = await _exec(self._under, *args, **kwargs)
+            result = await _exec(functools.partial(flip(getattr)), (name,), {})
+            return result
+
+        return AsyncResult(compose, *self.args, **self.kwargs)
 
     async def match(self, *whens: When | Default | Matchable):
         """ """
         result = await self._execute()
-        container: Result[Any] | Err[Exception]
         _, container = unravel_container(result)
         return container.match(*whens)
 
     @staticmethod
-    def of(f, *args, **kwargs):
+    def of(f: t.Callable[P, t.Awaitable[V]]):
         """
         >>>import asyncio
         >>>async def test(x: int):
@@ -184,19 +223,20 @@ class AsyncResult(ResultContainer[Awaitable]):
         >>>)
 
         """
-        future = AsyncResult(f, *args, **kwargs)
-        return future
+        return AsyncResult(f)  # type: ignore
 
 
 async_try = AsyncResult
 Future = AsyncResult
 
 
-def lift_future(f) -> Callable[..., AsyncResult]:
+def lift_future(
+    f: t.Callable[P_mapper, t.Awaitable[U]]
+) -> t.Callable[..., AsyncResult[P_mapper, U, Exception]]:
     if not asyncio.iscoroutinefunction(f):
         raise TypeError("Can only be used on async function")
 
-    def wrapper(*args, **kwargs):
-        return AsyncResult.of(f, *args, **kwargs)
+    def wrapper(*args: P_mapper.args, **kwargs: P_mapper.kwargs):
+        return AsyncResult.of(f)(*args, **kwargs)
 
     return wrapper

@@ -1,10 +1,12 @@
-import abc
+import typing as t
 from dataclasses import dataclass
-from typing import Any, Callable
 
 # noinspection PyProtectedMember
 from pampy import _ as __  # type: ignore
 from pampy.pampy import match_dict as pampy_dict_matcher  # type: ignore
+
+if t.TYPE_CHECKING:
+    from seito.monad.option import Empty, Some  # noqa: F401
 
 _ = __
 
@@ -21,7 +23,10 @@ def flip(f):
     return _flipper
 
 
-def identity(x: Any) -> Any:
+T = t.TypeVar("T")
+
+
+def identity(x: T) -> T:
     """ """
     return x
 
@@ -46,21 +51,27 @@ class MatchError(TypeError):
     ...
 
 
-def apply(f: Callable[..., Any] | Any = identity, *args: Any, **kwargs: Any) -> Any:
+P = t.ParamSpec("P")
+
+
+def apply(f: t.Callable[P, T] | T, *args: P.args, **kwargs: P.kwargs) -> T:
     """ """
     if callable(f):
         return f(*args, **kwargs)
     return f
 
 
+T2 = t.TypeVar("T2")
+
+
 class When:
     """ """
 
-    def __init__(self, value: "Matchable | Any"):
-        self.value: "Matchable" = value
-        self.action: Callable[["Matchable"], Any] | None = None
+    def __init__(self, value: "Matchable"):
+        self.value: Matchable = value
+        self.action: t.Callable[..., t.Any] | None = None
 
-    def then(self, f: Callable[["Matchable"], Any]):
+    def then(self, f: t.Callable[..., t.Any]):
         """ """
         self.action = f
         return self
@@ -87,21 +98,21 @@ class Default:
 default = Default()
 
 
-class Matchable(abc.ABC):
-    __matchable_classes__: set[Any] = set()
+class Matchable(t.Protocol):
+    __matchable_classes__: t.ClassVar[set[t.Any]] = set()
 
     def __rshift__(self, other) -> When:
         """ """
         return When(self).then(other)
 
-    def match(self, *whens: "When | Default | Matchable"):
+    def match(self, *whens: "When | Matchable | Default") -> t.Any:
         for w in whens:
             if isinstance(w, Default):
                 return apply(w.action)
 
             when_inst = w
             if not isinstance(when_inst, When):
-                assert isinstance(when_inst, Matchable)
+                # assert isinstance(when_inst, Matchable)
                 when_inst = When(when_inst)
 
             if isinstance(when_inst, when):

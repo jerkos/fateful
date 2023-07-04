@@ -1,15 +1,14 @@
-import functools
 import typing
-from typing import Any, Type, Mapping, Callable
+from typing import Any, Mapping, Type
 
-from seito.monad.option import opt, none, OptionContainer
-from seito.monad.result import Result, Err
+from seito.monad.option import Empty, Some, none, opt
 from seito.try_ import Try
 
 try:
     import orjson as json  # type: ignore
 except ImportError:
     import json  # type: ignore
+
 from json.decoder import JSONDecodeError
 
 
@@ -45,14 +44,14 @@ class JsObject(dict):
         """expected a dataclass or a basemodel"""
         return clazz(**self)
 
-    def __getitem__(self, item: str) -> OptionContainer[Any | None]:
+    def __getitem__(self, item: str) -> Some | Empty:
         try:
             v = super(JsObject, self).__getitem__(item)
             return opt(v)
         except KeyError:
             return none
 
-    def __getattr__(self, item: str) -> OptionContainer[Any | None]:
+    def __getattr__(self, item: str) -> Some | Empty:
         return self[item]
 
     def __setattr__(self, key, value):
@@ -80,6 +79,4 @@ def parse(string: str | bytes | bytearray, *, response_class=None, **kwargs: Any
     return response_class(**value)
 
 
-try_parse: Callable[..., Result[Any] | Err[Exception]] = functools.partial(
-    Try.of, parse, errors=(JSONDecodeError,)
-)
+try_parse = Try.of(parse).on_error((JSONDecodeError,))

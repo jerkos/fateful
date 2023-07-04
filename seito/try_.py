@@ -1,51 +1,63 @@
-from typing import Callable, TypeVar, Generic, Type, Any
+import typing as t
 
-from seito.monad.result import Result, Err
+from seito.monad.result import Err, Ok
 
-T = TypeVar("T")
+T = t.TypeVar("T", covariant=True)
+P = t.ParamSpec("P")
+P_mapper = t.ParamSpec("P_mapper")
+E = t.TypeVar("E", bound=Exception, covariant=True)
 
 
-class Try(Generic[T]):
+class Try(t.Generic[P, T, E]):
     def __init__(
         self,
-        f: Callable[..., T],
-        *args: Any,
-        errors: tuple[Type[Exception], ...] = (Exception,),
-        **kwargs: Any,
+        f: t.Callable[P, T],
+        *args: P.args,
+        **kwargs: P.kwargs,
     ):
         self.f = f
         self.args = args
-        self.errors: tuple[Type[Exception], ...] = errors
         self.kwargs = kwargs
+        self.errors: tuple[type[E], ...] = t.cast(tuple[type[E], ...], (Exception,))
 
-    def on_error(self, *errors: Type[Exception]) -> "Try[T]":
+    def on_error(self, errors: tuple[type[E]]) -> "Try[P, T, E]":
         if not all(issubclass(e, Exception) for e in errors):
             raise ValueError("Error")
         self.errors = errors or (Exception,)
         return self
 
-    def __call__(self) -> Result[T] | Err[Exception]:
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> Ok[T] | Err[E]:
+        self.args = args
+        self.kwargs = kwargs
         try:
             value = self.f(*self.args, **self.kwargs)
-        except self.errors as e:
-            return Err(e)
+        except Exception as e:
+            for error in self.errors:
+                if isinstance(e, error):
+                    return Err(e)
+            raise
         else:
-            return Result(value)
+            return Ok(value)
 
     @staticmethod
     def of(
-        f: Callable[..., T],
-        *args: Any,
-        errors: tuple[Type[Exception], ...] = (Exception,),
-        **kwargs: Any,
-    ) -> Result[T] | Err[Exception]:
-        return Try[T](f, *args, errors=errors, **kwargs)()
+        fn: t.Callable[P_mapper, T],
+    ) -> "Try[P_mapper, T, E]":
+        return Try(fn)
 
 
-def attempt_to(errors=(Exception,)):
-    def wrapper(f):
-        def inner(*args, **kwargs):
-            return Try(f, *args, errors=errors, **kwargs)()
+V = t.TypeVar("V")
+T_err = t.TypeVar("T_err", bound=Exception)
+
+
+def attempt_to(
+    errors=(Exception,)
+) -> t.Callable[[t.Callable[P_mapper, V]], t.Callable[P_mapper, Ok[V] | Err[t.Any]]]:
+    def wrapper(f: t.Callable[P_mapper, V]) -> t.Callable[P_mapper, Ok[V] | Err[t.Any]]:
+        def inner(
+            *args: P_mapper.args, **kwargs: P_mapper.kwargs
+        ) -> Ok[V] | Err[t.Any]:
+            return Try(f)(*args, **kwargs)
 
         return inner
 

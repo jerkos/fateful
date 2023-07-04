@@ -2,17 +2,17 @@ import aiohttp
 import pytest
 from assertpy import assert_that
 
-from seito.http import request, HttpMethods, get, try_get
+from seito.http import HttpMethods, get, request, try_get
 from seito.monad.async_result import async_try
-from seito.monad.func import identity, default, _
-from seito.monad.result import Result, Err
+from seito.monad.func import _, default, identity
+from seito.monad.result import Err, Ok
 
 
 @pytest.mark.asyncio
 async def test_request():
     session = aiohttp.ClientSession()
     result = await request(HttpMethods.GET, "https://google.com", session=session)
-    value = result.match(Result(_) >> identity, default >> None)
+    value = result.match(Ok(_) >> identity, default >> None)
     assert_that(value).is_not_none()
 
     result = await async_try(
@@ -25,7 +25,7 @@ async def test_request():
 async def test_request_2():
     async with aiohttp.ClientSession() as session:
         result = await get("https://google.com", session=session)
-        value = result.match(Result(_) >> identity, default >> None)
+        value = result.match(Ok(_) >> identity, default >> None)
         assert_that(value).is_not_none()
 
         result = await try_get("https://google.com", session=session).get()
