@@ -1,3 +1,5 @@
+![seito](img/seito.png)
+
 # Introduction
 
 Python has some great functional features. The most notable ones are list / dict
@@ -43,10 +45,11 @@ The Result Monad offers several benefits:
 
 # Getting started
 
-![seito](img/seito.png)
-
 Simply install `seito` coming directly from pypi with your favorite python package manager.
 This will install all needed dependencies.
+
+!!! note "made with pdm"
+    seito uses **pdm** as dependency manager
 
 ## with package manager
 
