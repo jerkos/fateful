@@ -20,7 +20,7 @@ build-backend = "pdm.backend"
 
 [project]
 name = "seito"
-version = "0.2.5"
+version = "0.2.6"
 description = "rusty container"
 authors = [
     {name = "Marco", email = "cram@hotmail.fr"},

@@ -86,39 +86,39 @@ get = partial(request, HttpMethods.GET)
 
 
 def try_get(url, **kwargs):
-    return async_try(get, url, **kwargs)
+    return async_try(get)(url, **kwargs)
 
 
 post = partial(request, HttpMethods.POST)
 
 
 def try_post(url, **kwargs):  # pragma: no cover
-    return async_try(post, url, **kwargs)
+    return async_try(post)(url, **kwargs)
 
 
 put = partial(request, HttpMethods.PUT)
 
 
 def try_put(url, **kwargs):  # pragma: no cover
-    return async_try(put, url, **kwargs)
+    return async_try(put)(url, **kwargs)
 
 
 delete = partial(request, HttpMethods.DELETE)
 
 
 def try_delete(url, **kwargs):  # pragma: no cover
-    return async_try(delete, url, **kwargs)
+    return async_try(delete)(url, **kwargs)
 
 
 patch = partial(request, HttpMethods.PATCH)
 
 
 def try_patch(url, **kwargs):  # pragma: no cover
-    return async_try(patch, url, **kwargs)
+    return async_try(patch)(url, **kwargs)
 
 
 options = partial(request, HttpMethods.OPTIONS)
 
 
 def try_options(url, **kwargs):  # pragma: no cover
-    return async_try(options, url, **kwargs)
+    return async_try(options)(url, **kwargs)

@@ -2,6 +2,8 @@ import asyncio
 import typing as t
 from inspect import isawaitable
 
+import typing_extensions as te
+
 from seito.monad.func import Default, Matchable, When
 from seito.monad.result import (
     Err,
@@ -44,8 +46,6 @@ class AsyncResult(
     def __init__(
         self,
         aws: t.Callable[P, t.Awaitable[V]],
-        *args: P.args,
-        **kwargs: P.kwargs,
     ):
         """
 
@@ -53,8 +53,8 @@ class AsyncResult(
             aws (t.Callable[P, t.Awaitable[V]]):
         """
         self._under = aws
-        self.args = args
-        self.kwargs = kwargs
+        self.args: tuple[t.Any, ...] = ()
+        self.kwargs: dict[str, t.Any] = {}
         self.errors: tuple[type[T_err], ...] = t.cast(
             tuple[type[T_err], ...], (Exception,)
         )
@@ -71,7 +71,7 @@ class AsyncResult(
         self.errors = errors
         return self
 
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> "AsyncResult":
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> te.Self:
         """
         Set the arguments that will be passed to the underlying function.
 
@@ -171,7 +171,10 @@ class AsyncResult(
             r: T_output = await _exec(fn, result)
             return r
 
-        return AsyncResult(compose, *self.args, **self.kwargs)
+        r = AsyncResult(compose)
+        r.args = self.args
+        r.kwargs = self.kwargs
+        return r
 
     async def for_each(self, fn: t.Callable[[V | T_err], None]) -> None:
         """
@@ -207,7 +210,10 @@ class AsyncResult(
                 result = await _exec(obj, *a, **kw)
             return result
 
-        return AsyncResult(compose, *self.args, **self.kwargs)
+        r = AsyncResult(compose)
+        r.args = self.args
+        r.kwargs = self.kwargs
+        return r
 
     async def get(self):
         """
@@ -303,7 +309,7 @@ class AsyncResult(
             r: t.Any = await _exec(getattr, result, name)  # type: ignore
             return r
 
-        return AsyncResult(compose, *self.args, **self.kwargs)
+        return AsyncResult(compose)
 
     async def match(
         self, *whens: When[t.Any, t.Any] | Matchable[t.Any] | Default[t.Any]
@@ -323,24 +329,6 @@ class AsyncResult(
             case _:
                 raise ValueError("Invalid result")
 
-    @staticmethod
-    def of(f: t.Callable[P, t.Awaitable[V]]):
-        """
-        >>>import asyncio
-        >>>async def test(x: int):
-        >>>    await asyncio.sleep(0.3)
-        >>>    return x + 100
-        >>>
-        >>> val = 1
-        >>>await (
-        >>>    AsyncResult.of(test, 1)
-        >>>    .map(lambda x: x - 100)
-        >>>    .for_each(lambda x: print(x == val))
-        >>>)
-
-        """
-        return AsyncResult(f)  # type: ignore
-
 
 async_try = AsyncResult
 Future = AsyncResult
@@ -353,6 +341,6 @@ def lift_future(
         raise TypeError("Can only be used on async function")
 
     def wrapper(*args: P_mapper.args, **kwargs: P_mapper.kwargs):
-        return AsyncResult.of(f)(*args, **kwargs)
+        return async_try(f)(*args, **kwargs)
 
     return wrapper

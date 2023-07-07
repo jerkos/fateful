@@ -45,17 +45,17 @@ async def async_a():
 
 @pytest.mark.asyncio
 async def test_async_opt():
-    value = await async_try(add_async, 1, 1).or_else(obj=lambda: 4)
+    value = await async_try(add_async)(1, 1).or_else(obj=lambda: 4)
     assert_that(value).is_equal_to(2)
 
     value = await async_try(async_none).or_else(lambda: 1)
     assert_that(value).is_equal_to(None)
 
-    value = await async_try(add_async, 1, 2).map(lambda x: x * 2).get()
+    value = await async_try(add_async)(1, 2).map(lambda x: x * 2).get()
     assert_that(value).is_equal_to(6)
 
     value = (
-        await async_try(add_async, 1, 2).map(lambda x: x * 2).map(lambda x: x / 2).get()
+        await async_try(add_async)(1, 2).map(lambda x: x * 2).map(lambda x: x / 2).get()
     )
     assert_that(value).is_equal_to(3)
     #
@@ -73,23 +73,23 @@ async def test_async_opt():
     assert_that(value).is_equal_to("Not passed")
 
     #
-    async for val in async_try(add_async, 1, 2):
+    async for val in async_try(add_async)(1, 2):
         value = val
     assert_that(value).is_equal_to(3)
     #
     value = (
-        await AsyncResult.of(add_async)(1, 2)
+        await AsyncResult(add_async)(1, 2)
         .map(lambda x: x * 2)
         .map(lambda x: x / 2)
         .match(Ok(_), default >> 1)
     )
     assert_that(value).is_equal_to(3.0)
 
-    assert_that(await async_try(add_async, 1, 2).is_error()).is_false()
+    assert_that(await async_try(add_async)(1, 2).is_error()).is_false()
     #
-    assert_that(await async_try(add_async, 1, 2).or_raise(ValueError())).is_equal_to(3)
+    assert_that(await async_try(add_async)(1, 2).or_raise(ValueError())).is_equal_to(3)
     #
-    str(async_try(add_async, 1, 2))
+    str(async_try(add_async)(1, 2))
     #
     assert_that(await async_try(async_raise).or_else(lambda: 1)).is_equal_to(1)
     #
@@ -99,10 +99,10 @@ async def test_async_opt():
         await async_try(async_raise).get()
     #
     assert_that(
-        await async_try(async_identity, 1).map(lambda x: x / 0).or_else(lambda: 1)
+        await async_try(async_identity)(1).map(lambda x: x / 0).or_else(lambda: 1)
     ).is_equal_to(1)
     #
-    async for val in async_try(async_identity, 1):
+    async for val in async_try(async_identity)(1):
         assert_that(val).is_equal_to(1)
     #
     assert_that(await async_try(async_raise).or_else(1)).is_equal_to(1)
@@ -121,13 +121,13 @@ async def test_async_opt():
     #
     assert_that(await async_try(async_a).y.or_else(lambda: 1)).is_equal_to(1)
     #
-    value = await AsyncResult.of(async_raise).on_error((ZeroDivisionError,)).or_none()
+    value = await AsyncResult(async_raise).on_error((ZeroDivisionError,)).or_none()
     assert_that(value).is_none()
 
-    assert_that(await async_try(async_identity, 1).is_ok()).is_true()
+    assert_that(await async_try(async_identity)(1).is_ok()).is_true()
 
     v = []
-    await async_try(async_identity, 1).for_each(lambda r: v.append(r))
+    await async_try(async_identity)(1).for_each(lambda r: v.append(r))
     assert_that(v).is_equal_to([1])
 
     @lift_future
@@ -151,15 +151,15 @@ async def test_async_opt():
         await asyncio.sleep(0.1)
         return a / b
 
-    result = await async_try.of(add_async)(1, 1).map(lambda x: x / 0).or_else(lambda: 1)
+    result = await async_try(add_async)(1, 1).map(lambda x: x / 0).or_else(lambda: 1)
     print(result)
 
     class A:
         pass
 
-    a_test: AsyncResult[
-        ..., float, ZeroDivisionError | ArithmeticError
-    ] = AsyncResult.of(test_22)(1, 1)
+    a_test: AsyncResult[..., float, ZeroDivisionError | ArithmeticError] = AsyncResult(
+        test_22
+    )(1, 1)
 
     a_test = a_test.on_error((ZeroDivisionError,))
 

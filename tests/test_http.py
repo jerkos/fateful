@@ -15,8 +15,8 @@ async def test_request():
     value = result.match(Ok(_) >> identity, default >> None)
     assert_that(value).is_not_none()
 
-    result = await async_try(
-        request, HttpMethods.GET, "https://google.com", session=session
+    result = await async_try(request)(
+        HttpMethods.GET, "https://google.com", session=session
     ).get()
     await session.close()
 
