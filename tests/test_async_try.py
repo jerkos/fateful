@@ -105,7 +105,7 @@ async def test_async_opt():
     async for val in async_try(async_identity, 1):
         assert_that(val).is_equal_to(1)
     #
-    assert_that(await async_try(async_raise).or_(1)).is_equal_to(1)
+    assert_that(await async_try(async_raise).or_else(1)).is_equal_to(1)
     #
     assert_that(await async_try(async_raise).or_else(add_async, 1, 2)).is_equal_to(3)
     #

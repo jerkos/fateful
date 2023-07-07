@@ -1,5 +1,6 @@
-import abc
 import typing as t
+
+import typing_extensions as te
 
 from seito.monad.func import Matchable
 
@@ -10,71 +11,59 @@ class EmptyError(ValueError):
     ...
 
 
-T_input_mappable = t.TypeVar("T_input_mappable", covariant=True)
-T_output_mappable = t.TypeVar("T_output_mappable")
+T_co = t.TypeVar("T_co", covariant=True)
+V = t.TypeVar("V")
 P = t.ParamSpec("P")
 
 
-class MappableContainer(t.Protocol[T_input_mappable]):
-    def map(
-        self, fn: t.Callable[[T_input_mappable], T_output_mappable]
-    ) -> T_output_mappable:  # pragma: no cover
+class MappableContainer(t.Protocol[T_co]):
+    def map(self, fn: t.Callable[[T_co], V]) -> V:  # pragma: no cover
         ...
 
 
-T_input = t.TypeVar("T_input", covariant=True)
-T_output = t.TypeVar("T_output")
-
-
-class CommonContainer(Matchable, MappableContainer[T_input], t.Protocol):
+class CommonContainer(MappableContainer[T_co], Matchable[T_co], t.Protocol):
     """ """
 
-    __match_args__ = ("_under",)
+    __match_args__: tuple[t.Literal["_under"]] = ("_under",)
 
-    @abc.abstractmethod
-    def get(self) -> T_input | t.NoReturn:
+    def get(self) -> T_co | t.NoReturn:
         """ """
         ...  # pragma: no cover
 
-    @abc.abstractmethod
-    def or_(obj: T_output) -> T_input | T_output:
-        ...
+    def unwrap(self) -> T_co | t.NoReturn:
+        return self.get()
 
-    @abc.abstractmethod
     def or_else(
-        self, obj: t.Callable[P, T_output], *args: P.args, **kwargs: P.kwargs
-    ) -> T_input | T_output:
+        self, obj: t.Callable[P, V] | V, *args: P.args, **kwargs: P.kwargs
+    ) -> T_co | V:
         """ """
         ...  # pragma: no cover
 
-    unwrap_or = or_else
+    def unwrap_or_else(
+        self, obj: t.Callable[P, V] | V, *args: P.args, **kwargs: P.kwargs
+    ) -> T_co | V:
+        return self.or_else(obj, *args, **kwargs)
 
-    @abc.abstractmethod
-    def or_none(self) -> T_input | None:
+    def or_none(self) -> T_co | None:
         """ """
         ...  # pragma: no cover
 
-    @abc.abstractmethod
-    def or_raise(self, exc: Exception | None = None) -> T_input | t.NoReturn:
+    def or_raise(self, exc: Exception | None = None) -> T_co | t.NoReturn:
         """ """
         ...  # pragma: no cover
 
-    @abc.abstractmethod
-    def __iter__(self) -> "t.Iterator[T_input | CommonContainer[T_input]]":
+    def __iter__(self) -> "t.Iterator[T_co]":
         """ """
         ...  # pragma: no cover
 
-    @abc.abstractmethod
     def __getattr__(self, name: str) -> t.Any:
         """ """
         ...  # pragma: no cover
 
-    @abc.abstractmethod
-    def __call__(self, *args: t.Any, **kwargs: t.Any):
+    def __call__(self, *args: t.Any, **kwargs: t.Any) -> te.Self:
         """ """
-        ...  # pragma: no cover
+        return self
 
-    @abc.abstractmethod
     def __str__(self) -> str:
         """ """
         ...  # pragma: no cover

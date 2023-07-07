@@ -2,7 +2,7 @@ import typing
 from typing import Any, Mapping, Type
 
 from seito.monad.option import Empty, Some, none, opt
-from seito.try_ import Try
+from seito.monad.result import sync_try
 
 try:
     import orjson as json  # type: ignore
@@ -79,4 +79,4 @@ def parse(string: str | bytes | bytearray, *, response_class=None, **kwargs: Any
     return response_class(**value)
 
 
-try_parse = Try.of(parse).on_error((JSONDecodeError,))
+try_parse = sync_try(parse, exc=(JSONDecodeError,))
