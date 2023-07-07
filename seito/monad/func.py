@@ -101,7 +101,6 @@ default: Default[t.Any] = Default()
 
 U = t.TypeVar("U")
 
-Q = t.TypeVar("Q")
 
 Nested: t.TypeAlias = "Matchable[Q | Nested[Q]]"
 
@@ -215,7 +214,7 @@ class Matchable(t.Protocol[T_co]):
         for w in whens:
             if isinstance(w, Default):
                 assert w.action is not None
-                return apply(w.action)
+                return apply(w.action)  # type: ignore[arg-type]
 
             when_inst = w
             if not isinstance(when_inst, When):
@@ -242,5 +241,5 @@ class Matchable(t.Protocol[T_co]):
                         if len(extracted) == 1:
                             return extracted[0]
                         return extracted
-                    return apply(when_inst.action, *extracted)
+                    return apply(when_inst.action, *extracted)  # type: ignore[arg-type]
         raise MatchError(f"No default guard found, enable to match {self}")

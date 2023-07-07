@@ -106,7 +106,7 @@ class Some(OptionContainer[T_co]):
         """
         return self._under
 
-    unwrap_or_else = or_else
+    unwrap_or_else = or_else  # type: ignore[assignment]
 
     def or_if_falsy(
         self, obj: t.Callable[P, U], *args: P.args, **kwargs: P.kwargs
@@ -120,7 +120,7 @@ class Some(OptionContainer[T_co]):
         Returns:
             T | U: _description_
         """
-        return self._under or apply(obj, *args, **kwargs)
+        return self._under or apply(obj, *args, **kwargs)  # type: ignore[arg-type]
 
     def or_none(self) -> T_co:
         """
@@ -153,7 +153,7 @@ class Some(OptionContainer[T_co]):
         Returns:
             Some[U]: _description_
         """
-        result = apply(func, self._under)
+        result = apply(func, self._under)  # type: ignore
         result = opt(result)
         return result
 
@@ -230,7 +230,7 @@ class Empty(OptionContainer[None]):
     def or_else(
         self, obj: t.Callable[P, U] | U, *args: P.args, **kwargs: P.kwargs
     ) -> U:
-        return apply(obj, *args, **kwargs)
+        return apply(obj, *args, **kwargs)  # type: ignore
 
     def unwrap_or_else(
         self, obj: t.Callable[P, U], *args: P.args, **kwargs: P.kwargs
@@ -240,7 +240,7 @@ class Empty(OptionContainer[None]):
     def or_if_falsy(
         self, obj: t.Callable[P, U] | U, *args: P.args, **kwargs: P.kwargs
     ) -> U:
-        x = apply(obj, *args, **kwargs)
+        x = apply(obj, *args, **kwargs)  # type: ignore
         return x
 
     def or_none(self) -> None:

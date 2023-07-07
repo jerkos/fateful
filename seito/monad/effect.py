@@ -14,7 +14,7 @@ class Effect(MappableContainer[T_wrapped_type]):
     _under: T_wrapped_type
 
     def map(self, func: t.Callable[[T_wrapped_type], T_output]) -> "Effect[T_output]":
-        return Effect(apply(func, self._under))
+        return Effect(apply(func, self._under))  # type: ignore[arg-type]
 
     def __str__(self) -> str:
         return f"<Impure {repr(self._under)}/>"
@@ -26,6 +26,6 @@ def lift_effect(
     """ """
 
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> Effect[T_wrapped_type]:
-        return Effect(f(*args, **kwargs))
+        return Effect(f(*args, **kwargs)) # type: ignore[arg-type]
 
     return wrapper

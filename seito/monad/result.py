@@ -275,7 +275,7 @@ def result_shortcut(
 
     def inner(*args: P.args, **kwargs: P.kwargs) -> Ok[T_co] | Err[T_error]:
         try:
-            return Ok(f(*args, **kwargs))
+            return Ok(f(*args, **kwargs))  # type: ignore[arg-type]
         except Exception as e:
             if isinstance(e, ResultShortcutError):
                 return Err(e.error)

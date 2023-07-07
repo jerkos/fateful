@@ -42,7 +42,7 @@ class CommonContainer(MappableContainer[T_co], Matchable[T_co], t.Protocol):
     def unwrap_or_else(
         self, obj: t.Callable[P, V] | V, *args: P.args, **kwargs: P.kwargs
     ) -> T_co | V:
-        return self.or_else(obj, *args, **kwargs)
+        return self.or_else(obj, *args, **kwargs)  # type: ignore[arg-type]
 
     def or_none(self) -> T_co | None:
         """ """

@@ -91,7 +91,7 @@ class AsyncResult(
         **kwargs: P_mapper.kwargs,
     ) -> Ok[T_output] | Err[T_err]:
         try:
-            r = await _exec(fn, *args, **kwargs)
+            r = await _exec(fn, *args, **kwargs)  # type: ignore
         except Exception as e:
             for err in self.errors:
                 if isinstance(e, err):
@@ -145,7 +145,7 @@ class AsyncResult(
         """ """
         result = await self._execute()
         if predicate(result):
-            return await _exec(or_f, *args, **kwargs)
+            return await _exec(or_f, *args, **kwargs)  # type: ignore
         _, container = unravel_container(result)
         return container.get()
 
@@ -167,11 +167,11 @@ class AsyncResult(
         """
 
         async def compose(*args: P.args, **kwargs: P.kwargs) -> T_output:
-            result: V = await _exec(self._under, *args, **kwargs)
-            r: T_output = await _exec(fn, result)
+            result: V = await _exec(self._under, *args, **kwargs)  # type: ignore
+            r: T_output = await _exec(fn, result)  # type: ignore
             return r
 
-        r = AsyncResult(compose)
+        r: AsyncResult[P, T_output, T_err] = AsyncResult(compose)
         r.args = self.args
         r.kwargs = self.kwargs
         return r
@@ -185,7 +185,7 @@ class AsyncResult(
         """
         result = await self._execute()
         result, _ = unravel_container(result)
-        fn(result)
+        fn(result)  # type: ignore[arg-type]
 
     def recover(
         self,
@@ -205,12 +205,12 @@ class AsyncResult(
 
         async def compose(*args: P.args, **kwargs: P.kwargs) -> V:
             try:
-                result = await _exec(self._under, *args, **kwargs)
+                result = await _exec(self._under, *args, **kwargs)  # type: ignore
             except Exception:
-                result = await _exec(obj, *a, **kw)
+                result = await _exec(obj, *a, **kw)  # type: ignore
             return result
 
-        r = AsyncResult(compose)
+        r: AsyncResult[P, V, T_err] = AsyncResult(compose)
         r.args = self.args
         r.kwargs = self.kwargs
         return r
@@ -274,9 +274,9 @@ class AsyncResult(
         def check_value(step_result: t.Any) -> bool:
             return isinstance(step_result, (Err, Exception)) or (step_result is None)
 
-        return await self._execute_or_clause_if(  # type: ignore
-            check_value, obj, *args, **kwargs
-        )
+        return await self._execute_or_clause_if(
+            check_value, obj, *args, **kwargs  # type: ignore
+        )  # type: ignore
 
     async def or_raise(self, exc: Exception | None = None) -> t.Any | None:
         """
