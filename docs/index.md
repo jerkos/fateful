@@ -65,5 +65,14 @@ This will install all needed dependencies.
     pip install seito
     ```
 
+## Note on type checking
+
+*Seito* has been developed in VSCode using Pyright type checker (with Pylance).
+A focus has been made on type checking and providing decent completion with this setup.
+
+A first run on mypy showed a lot of error not picked up by pyright, the idea is to fix
+those errors as soon as possible to be mypy compliant.
+
+
 🥇 that's it, ready to save some code...
 
