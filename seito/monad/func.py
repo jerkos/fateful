@@ -41,16 +41,6 @@ class MatchError(TypeError):
 P = t.ParamSpec("P")
 
 
-# @t.overload
-# def apply(f: t.Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T:
-#    ...
-
-
-# @t.overload
-# def apply(f: T) -> T:
-#    ...
-
-
 def apply(f: t.Callable[P, T] | T, *args: P.args, **kwargs: P.kwargs) -> T:
     """ """
     if callable(f):
@@ -67,7 +57,7 @@ Q = t.TypeVar("Q")
 class When(t.Generic[T_co, S_co]):
     """ """
 
-    def __init__(self, value: "Matchable[T_co]"):
+    def __init__(self, value: "MatchableMixin[T_co]"):
         self.value = value
         self.action: t.Callable[..., S_co] | None = None
 
@@ -102,7 +92,7 @@ default: Default[t.Any] = Default()
 U = t.TypeVar("U")
 
 
-Nested: t.TypeAlias = "Matchable[Q | Nested[Q]]"
+Nested: t.TypeAlias = "MatchableMixin[Q | Nested[Q]]"
 
 
 def convert_to_dict(obj: dict[str, t.Any]) -> dict[str, t.Any]:
@@ -113,22 +103,22 @@ def convert_to_dict(obj: dict[str, t.Any]) -> dict[str, t.Any]:
     return obj
 
 
-class Matchable(t.Protocol[T_co]):
+class MatchableMixin(t.Generic[T_co]):
     __matchable_classes__: t.ClassVar[set[t.Any]] = set()
 
     @t.overload
     def __rshift__(
-        self: "Matchable[UnderscoreType]", other: t.Callable[[T_co], T_co]
+        self: "MatchableMixin[UnderscoreType]", other: t.Callable[[T_co], T_co]
     ) -> When[T, T]:
         ...
 
     @t.overload
-    def __rshift__(self: "Matchable[V]", other: t.Callable[[V], U]) -> When[V, U]:
+    def __rshift__(self: "MatchableMixin[V]", other: t.Callable[[V], U]) -> When[V, U]:
         ...
 
     @t.overload
     def __rshift__(
-        self: "Matchable[T_co]", other: t.Callable[[T_co], U]
+        self: "MatchableMixin[T_co]", other: t.Callable[[T_co], U]
     ) -> When[T_co, U]:
         ...
 
@@ -181,35 +171,35 @@ class Matchable(t.Protocol[T_co]):
         ...
 
     @t.overload
-    def match(self, *whens: "Matchable[UnderscoreType]" | Default[T_co]) -> T_co:
+    def match(self, *whens: "MatchableMixin[UnderscoreType]" | Default[T_co]) -> T_co:
         """
         >>> d = opt(1).match(*(Some(_), default >>  100))
         """
         ...
 
     @t.overload
-    def match(self, *whens: "Matchable[V]") -> V:
+    def match(self, *whens: "MatchableMixin[V]") -> V:
         """
         >>> val = opt(ValueError).match(Some(type[ValueError]))
         """
         ...
 
     @t.overload
-    def match(self, *whens: "Matchable[t.Any]" | Default[V]) -> V | t.Any:
+    def match(self, *whens: "MatchableMixin[t.Any]" | Default[V]) -> V | t.Any:
         """
         >>> m1, m2 = val.match(*(Some({1: _, 2: _}), default >> (1, 2)))
         """
         ...
 
     @t.overload
-    def match(self, *whens: "When | Matchable | Default") -> t.Any:
+    def match(self, *whens: "When | MatchableMixin | Default") -> t.Any:
         """
         Can not infer other return type !
         """
         ...
 
     def match(
-        self, *whens: "When[t.Any, t.Any] | Matchable[t.Any] | Default[t.Any]"
+        self, *whens: "When[t.Any, t.Any] | MatchableMixin[t.Any] | Default[t.Any]"
     ) -> t.Any:
         for w in whens:
             if isinstance(w, Default):

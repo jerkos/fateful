@@ -59,7 +59,12 @@ class Test(unittest.TestCase):
         value = 1
         for v in option(value):
             self.assertEqual(v, 1)
-        self.assertEqual(list(opt(None)), [])
+
+        result = ""
+        for v in none:
+            result = "none"
+        self.assertEqual(result, "")
+        self.assertEqual(list(none), [])
 
     def test_option_forwarding(self):
         value = "VALUE"
@@ -256,9 +261,9 @@ class Test(unittest.TestCase):
             cc = opt(1)
             cc.match(Ok(_) >> identity)
 
-        Some(Some(1))
+        vvv = Some(Some(1))
 
-        # hh = vvv.match(Some(Some(_)) >> identity, default >> 10)
+        hh = vvv.match(Some(Some(_)) >> identity, default >> 10)
         # assert_that(hh).is_equal_to(1)
 
         opt(1).match(Some(_) >> (lambda x: str(x)))

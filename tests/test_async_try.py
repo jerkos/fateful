@@ -3,7 +3,7 @@ import asyncio
 import pytest
 from assertpy import assert_that
 
-from seito.monad.async_result import AsyncResult, async_try, lift_future
+from seito.monad.async_result import AsyncTry, async_try, lift_future
 from seito.monad.func import _, default
 from seito.monad.option import Some, opt
 from seito.monad.result import Ok
@@ -78,7 +78,7 @@ async def test_async_opt():
     assert_that(value).is_equal_to(3)
     #
     value = (
-        await AsyncResult(add_async)(1, 2)
+        await AsyncTry(add_async)(1, 2)
         .map(lambda x: x * 2)
         .map(lambda x: x / 2)
         .match(Ok(_), default >> 1)
@@ -121,7 +121,7 @@ async def test_async_opt():
     #
     assert_that(await async_try(async_a).y.or_else(lambda: 1)).is_equal_to(1)
     #
-    value = await AsyncResult(async_raise).on_error((ZeroDivisionError,)).or_none()
+    value = await AsyncTry(async_raise, ZeroDivisionError)().or_none()
     assert_that(value).is_none()
 
     assert_that(await async_try(async_identity)(1).is_ok()).is_true()
@@ -131,12 +131,12 @@ async def test_async_opt():
     assert_that(v).is_equal_to([1])
 
     @lift_future
-    async def test_async_(a, b) -> float:
+    async def test_async_(a: int, b: int) -> float:
         await asyncio.sleep(0.1)
         return a / b
 
     assert_that(await test_async_(1, 1).get()).is_equal_to(1.0)
-    assert_that(await test_async_(1, 0).recover(lambda: 1).get()).is_equal_to(1)
+    assert_that(await test_async_(1, 0).recover(1).get()).is_equal_to(1)
     assert_that(
         await test_async_(1, 0).map(lambda x: x + 1).recover(lambda: 1).get()
     ).is_equal_to(1)
@@ -157,10 +157,8 @@ async def test_async_opt():
     class A:
         pass
 
-    a_test: AsyncResult[..., float, ZeroDivisionError | ArithmeticError] = AsyncResult(
-        test_22
+    a_test: AsyncTry[..., float, ZeroDivisionError | ArithmeticError] = AsyncTry(
+        test_22, ZeroDivisionError
     )(1, 1)
-
-    a_test = a_test.on_error((ZeroDivisionError,))
 
     result = await a_test.execute()

@@ -1,8 +1,9 @@
+import abc
 import typing as t
 
 import typing_extensions as te
 
-from seito.monad.func import Matchable
+from seito.monad.func import MatchableMixin
 
 
 class EmptyError(ValueError):
@@ -16,46 +17,58 @@ V = t.TypeVar("V")
 P = t.ParamSpec("P")
 
 
-class MappableContainer(t.Protocol[T_co]):
-    def map(self, fn: t.Callable[[T_co], V]) -> V:  # pragma: no cover
+class MappableContainerMixin(t.Generic[T_co], abc.ABC):
+    @abc.abstractmethod
+    def map(
+        self, fn: t.Callable[[t.Any], V]
+    ) -> "MappableContainerMixin[V | Exception | None | T_co]":  # pragma: no cover
         ...
 
 
-class CommonContainer(MappableContainer[T_co], Matchable[T_co], t.Protocol):
+class CommonContainer(MappableContainerMixin[T_co], MatchableMixin[T_co], abc.ABC):
     """ """
 
     __match_args__: tuple[t.Literal["_under"]] = ("_under",)
 
-    def get(self) -> T_co | t.NoReturn:
+    def __init__(self, under: T_co) -> None:
+        self._under = under
+
+    @abc.abstractmethod
+    def get(self) -> T_co:
         """ """
         ...  # pragma: no cover
 
-    def unwrap(self) -> T_co | t.NoReturn:
+    def unwrap(self) -> T_co:
         return self.get()
 
+    @abc.abstractmethod
     def or_else(
-        self, obj: t.Callable[P, V] | V, *args: P.args, **kwargs: P.kwargs
-    ) -> T_co | V:
+        self, obj: t.Callable[P, V] | V, *args: t.Any, **kwargs: t.Any
+    ) -> t.Any:
         """ """
         ...  # pragma: no cover
 
     def unwrap_or_else(
         self, obj: t.Callable[P, V] | V, *args: P.args, **kwargs: P.kwargs
-    ) -> T_co | V:
+    ) -> object:
         return self.or_else(obj, *args, **kwargs)  # type: ignore[arg-type]
 
+    @abc.abstractmethod
     def or_none(self) -> T_co | None:
         """ """
         ...  # pragma: no cover
 
+    @abc.abstractmethod
     def or_raise(self, exc: Exception | None = None) -> T_co | t.NoReturn:
         """ """
         ...  # pragma: no cover
 
-    def __iter__(self) -> "t.Iterator[T_co]":
+    @abc.abstractmethod
+    def __iter__(self) -> "t.Iterator[T_co | te.Self]":
         """ """
         ...  # pragma: no cover
 
+    @abc.abstractmethod
     def __getattr__(self, name: str) -> t.Any:
         """ """
         ...  # pragma: no cover
@@ -64,6 +77,11 @@ class CommonContainer(MappableContainer[T_co], Matchable[T_co], t.Protocol):
         """ """
         return self
 
+    @abc.abstractmethod
     def __str__(self) -> str:
         """ """
         ...  # pragma: no cover
+
+    @abc.abstractmethod
+    def flatten(self) -> "CommonContainer":
+        ...

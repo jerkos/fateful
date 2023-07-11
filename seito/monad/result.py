@@ -1,32 +1,44 @@
+import abc
 import functools
 import typing as t
 from dataclasses import dataclass
 
 from seito.monad.container import CommonContainer
+from seito.monad.func import apply
 
 T_co = t.TypeVar("T_co", covariant=True)
 U = t.TypeVar("U")
 P = t.ParamSpec("P")
 
 
-class ResultContainer(CommonContainer[T_co], t.Protocol):  # type: ignore
+class ResultContainer(CommonContainer[T_co], abc.ABC):
+    @abc.abstractmethod
     def is_ok(self) -> bool:  # pragma: no cover
         ...
 
+    @abc.abstractmethod
     def is_error(self) -> bool:  # pragma: no cover
         ...
 
+    @abc.abstractmethod
     def recover(
-        self, obj: t.Callable[P, U] | U, *args: P.args, **kwargs: P.kwargs
-    ) -> U:  # pragma: no cover
+        self,
+        obj: t.Callable[P, U] | U,
+        *args: t.Any,
+        **kwargs: t.Any,
+    ) -> "Ok[U] | t.Any":  # pragma: no cover
         ...
 
     @property
+    @abc.abstractmethod
     def _(self) -> T_co | t.NoReturn:
         ...
 
 
-@dataclass(unsafe_hash=True)
+Nested: t.TypeAlias = "Ok[U | Nested[U]]"
+
+
+@dataclass(unsafe_hash=True, frozen=True)
 class Ok(ResultContainer[T_co]):
     _under: T_co
 
@@ -43,37 +55,32 @@ class Ok(ResultContainer[T_co]):
         return self._under
 
     @t.overload
-    def or_else(
-        self, obj: t.Callable[P, T_co] | T_co, *args: P.args, **kwargs: P.kwargs
-    ) -> T_co:
+    def or_else(self, obj: t.Callable[P, U], *args: P.args, **kwargs: P.kwargs) -> U:
         ...
 
     @t.overload
-    def or_else(self, obj: t.Any) -> T_co:
+    def or_else(self, obj: U, *args: t.Any, **kwargs: t.Any) -> U:
         ...
 
-    def or_else(
-        self, obj: t.Callable[P, T_co] | T_co, *args: P.args, **kwargs: P.kwargs
-    ) -> T_co:
-        return self._under
+    def or_else(self, obj: t.Callable[P, U] | U, *args: t.Any, **kwargs: t.Any) -> U:
+        return t.cast(U, self._under)
 
     def or_raise(self, exc: Exception | None = None) -> T_co:
         return self._under
 
     def recover(
-        self: "Ok[T_co]",
-        obj: t.Callable[P, U] | U,
+        self,
+        obj: t.Callable[P, U] | t.Callable[P, t.Awaitable[U]] | U,
         *args: P.args,
         **kwargs: P.kwargs,
-    ) -> "Ok[T_co]":
-        return self
+    ) -> "Ok[U]":
+        return t.cast(Ok[U], self)
 
     def map(self, fn: t.Callable[[T_co], U]) -> "Ok[U] | Err[Exception]":
         return sync_try(fn)(self._under)
 
     def __iter__(self) -> "t.Iterator[T_co]":
-        val, _ = unravel_container(self)
-        yield val
+        yield self.flatten().get()
 
     def __getattr__(
         self, name: str
@@ -93,6 +100,22 @@ class Ok(ResultContainer[T_co]):
 
         return Ok(attr)
 
+    @t.overload
+    def flatten(  # type: ignore[misc]
+        self: "Nested[Err[Exception]]",
+    ) -> "Err[Exception]":
+        ...
+
+    @t.overload
+    def flatten(self: "Nested[U]") -> "Ok[U]":
+        ...
+
+    def flatten(self) -> "Ok | Err":
+        x = self._under
+        while isinstance(x, CommonContainer):
+            x = x._under  # type: ignore
+        return Ok(x) if not isinstance(x, Exception) else Err(x)
+
     @property
     def _(self) -> T_co:
         return self._under
@@ -107,7 +130,7 @@ class Ok(ResultContainer[T_co]):
 T_error = t.TypeVar("T_error", bound=BaseException, covariant=True)
 
 
-@dataclass(unsafe_hash=True)
+@dataclass(unsafe_hash=True, frozen=True)
 class Err(ResultContainer[T_error]):
     """ """
 
@@ -120,10 +143,31 @@ class Err(ResultContainer[T_error]):
     def unwrap(self) -> T_error:
         return self._under
 
+    @t.overload
     def recover(
-        self, obj: t.Callable[P, U] | U, *args: P.args, **kwargs: P.kwargs
+        self,
+        obj: t.Callable[P, U],
+        *args: P.args,
+        **kwargs: P.kwargs,
     ) -> Ok[U]:
-        return Ok(obj(*args, **kwargs) if callable(obj) else obj)
+        ...
+
+    @t.overload
+    def recover(
+        self,
+        obj: U,
+        *args: t.Any,
+        **kwargs: t.Any,
+    ) -> Ok[U]:
+        ...
+
+    def recover(
+        self,
+        obj: t.Callable[P, U] | U,
+        *args: t.Any,
+        **kwargs: t.Any,
+    ) -> Ok[U]:
+        return Ok(apply(obj, *args, **kwargs))
 
     def is_error(self):
         return True
@@ -139,13 +183,11 @@ class Err(ResultContainer[T_error]):
         ...
 
     @t.overload
-    def or_else(self, obj: U) -> U:
+    def or_else(self, obj: U, *args: t.Any, **kwargs: t.Any) -> U:
         ...
 
-    def or_else(
-        self, obj: t.Callable[P, U] | U, *args: P.args, **kwargs: P.kwargs
-    ) -> U:
-        return obj(*args, **kwargs) if callable(obj) else obj
+    def or_else(self, obj: t.Callable[P, U] | U, *args: t.Any, **kwargs: t.Any) -> U:
+        return apply(obj, *args, **kwargs)
 
     def or_raise(self, exc: Exception | None = None) -> t.NoReturn:
         if exc is not None:
@@ -170,6 +212,9 @@ class Err(ResultContainer[T_error]):
     def __call__(self, *args: t.Any, **kwargs: t.Any) -> "Err[T_error]":
         return self
 
+    def flatten(self) -> "Err[T_error]":
+        return self
+
     @property
     def _(self) -> t.NoReturn:
         raise ResultShortcutError(self._under)
@@ -178,49 +223,25 @@ class Err(ResultContainer[T_error]):
         return f"<Err {repr(self._under)}>"
 
 
-@t.overload
-def unravel_container(
-    value: Ok[T_co] | Err[T_error],
-    last_container: Ok[T_co] | Err[T_error] | None = None,
-) -> tuple[T_co | T_error, Ok[T_co] | Err[T_error]]:
-    ...
-
-
-@t.overload
-def unravel_container(
-    value: t.Any, last_container: t.Any | None = None
-) -> tuple[t.Any, t.Any | None]:
-    ...
-
-
-def unravel_container(value, last_container=None):
-    """ """
-    match value:  # noqa: E999
-        case Ok(under) | Err(under) as c:
-            return unravel_container(under, c)
-        case _:
-            return value, last_container
-
-
 RESULT_MATCHABLE_CLASSES = {Ok, Err}
 
 Ok.__matchable_classes__ = RESULT_MATCHABLE_CLASSES
 Err.__matchable_classes__ = RESULT_MATCHABLE_CLASSES
 
-ResultType = t.Union[Ok[T_co], Err[T_error]]
+Result = t.Union[Ok[T_co], Err[T_error]]
 
 
 def sync_try(
     f: t.Callable[P, T_co],
     exc: type[T_error] | tuple[type[T_error], ...] = (Exception,),  # type: ignore
-) -> t.Callable[P, ResultType[T_co, T_error]]:
+) -> t.Callable[P, Result[T_co, T_error]]:
     """
     Run a function that may raise an exception and return a Result type.
     Args:
         exc (tuple[type[T_err], ...], optional): _description_. Defaults to (Exception,)
     """
 
-    def inner(*args: P.args, **kwargs: P.kwargs) -> ResultType[T_co, T_error]:
+    def inner(*args: P.args, **kwargs: P.kwargs) -> Result[T_co, T_error]:
         try:
             return Ok(f(*args, **kwargs))
         except Exception as e:
@@ -235,7 +256,7 @@ def sync_try(
 
 def to_result(
     exc: type[T_error] | tuple[type[T_error], ...] = (Exception,)  # type: ignore
-) -> t.Callable[[t.Callable[P, T_co]], t.Callable[P, ResultType[T_co, T_error]]]:
+) -> t.Callable[[t.Callable[P, T_co]], t.Callable[P, Result[T_co, T_error]]]:
     """
     Decorator to convert a function that may raise an exception to a Result type.
 
@@ -245,7 +266,7 @@ def to_result(
     Returns:
         _type_: _description_
     """
-    return functools.partial(sync_try, exc=exc)
+    return functools.partial(sync_try, exc=exc)  # type: ignore
 
 
 class ResultShortcutError(Exception, t.Generic[T_error]):
@@ -261,8 +282,8 @@ class ResultShortcutError(Exception, t.Generic[T_error]):
 
 
 def result_shortcut(
-    f: t.Callable[P, ResultType[T_co, T_error]]
-) -> t.Callable[P, ResultType[T_co, T_error]]:
+    f: t.Callable[P, Result[T_co, T_error]]
+) -> t.Callable[P, Result[T_co, T_error]]:
     """
     _summary_
 

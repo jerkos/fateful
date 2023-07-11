@@ -112,3 +112,6 @@ def test_result_shortcut():
     val = test_error(0)
     assert_that(val).is_instance_of(Err)
     assert_that(val.unwrap()).is_instance_of(ZeroDivisionError)
+
+    hj = Ok(Ok(1))
+    hjj = hj.flatten()

@@ -1,5 +1,7 @@
+import abc
 import typing as t
 from dataclasses import dataclass
+
 
 from seito.monad.container import CommonContainer, EmptyError
 from seito.monad.func import apply
@@ -10,22 +12,24 @@ V = t.TypeVar("V")
 P = t.ParamSpec("P")
 
 
-class OptionContainer(CommonContainer[T_co], t.Protocol):
+class OptionContainer(CommonContainer[T_co], abc.ABC):
+    @abc.abstractmethod
     def is_some(self) -> bool:  # pragma: no cover
         ...
 
+    @abc.abstractmethod
     def is_empty(self) -> bool:  # pragma: no cover
         ...
 
+    @abc.abstractmethod
     def or_if_falsy(
-        self, obj: t.Callable[P, t.Any] | t.Any, *args: P.args, **kwargs: P.kwargs
-    ) -> t.Any:  # pragma: no cover
+        self, obj: t.Callable | t.Any, *args: t.Any, **kwargs: t.Any
+    ) -> T_co | t.Any:  # pragma: no cover
         """ """
         ...
 
 
 Q = t.TypeVar("Q")
-
 
 Nested: t.TypeAlias = "Some[Q | Nested[Q]]"
 
@@ -64,7 +68,7 @@ class Some(OptionContainer[T_co]):
         return False
 
     @t.overload
-    def flatten(self: "Nested[Empty]") -> "Empty":
+    def flatten(self: "Nested[Empty]") -> "Empty":  # type: ignore[misc]
         ...
 
     @t.overload
@@ -84,18 +88,14 @@ class Some(OptionContainer[T_co]):
         return opt(x)
 
     @t.overload
-    def or_else(
-        self, obj: t.Callable[P, t.Any], *args: P.args, **kwargs: P.kwargs
-    ) -> T_co:
+    def or_else(self, obj: t.Callable[P, V], *args: P.args, **kwargs: P.kwargs) -> V:
         ...
 
     @t.overload
-    def or_else(self, obj: t.Any) -> T_co:
+    def or_else(self, obj: V, *args: t.Any, **kwargs: t.Any) -> V:
         ...
 
-    def or_else(
-        self, obj: t.Callable[P, t.Any] | t.Any, *args: P.args, **kwargs: P.kwargs
-    ) -> T_co:
+    def or_else(self, obj: t.Callable[P, V] | V, *args: t.Any, **kwargs: t.Any) -> V:
         """
         Apply a function to the value of the container.
         Args:
@@ -104,13 +104,23 @@ class Some(OptionContainer[T_co]):
         Returns:
             T: _description_
         """
-        return self._under
+        return t.cast(V, self._under)
 
     unwrap_or_else = or_else  # type: ignore[assignment]
 
+    @t.overload
     def or_if_falsy(
         self, obj: t.Callable[P, U], *args: P.args, **kwargs: P.kwargs
     ) -> T_co | U:
+        ...
+
+    @t.overload
+    def or_if_falsy(self, obj: U, *args: t.Any, **kwargs: t.Any) -> T_co | U:
+        ...
+
+    def or_if_falsy(
+        self, obj: t.Callable | t.Any, *args: t.Any, **kwargs: t.Any
+    ) -> T_co | t.Any:
         """
         Apply a function to the value of the container if it is falsy.
 
@@ -143,7 +153,7 @@ class Some(OptionContainer[T_co]):
         """
         return self._under
 
-    def map(self, func: t.Callable[[T_co], U]) -> "Some[U]":
+    def map(self, func: t.Callable[[T_co], U]) -> "Some[U] | Empty":
         """
         Apply a function to the value of the container.
 
@@ -220,22 +230,15 @@ class Empty(OptionContainer[None]):
         return obj
 
     @t.overload
-    def or_else(self, obj: t.Callable[P, U], *args: P.args, **kwargs: P.kwargs) -> U:
+    def or_else(self, obj: t.Callable[P, V], *args: P.args, **kwargs: P.kwargs) -> V:
         ...
 
     @t.overload
-    def or_else(self, obj: U) -> U:
+    def or_else(self, obj: V, *args: t.Any, **kwargs: t.Any) -> V:
         ...
 
-    def or_else(
-        self, obj: t.Callable[P, U] | U, *args: P.args, **kwargs: P.kwargs
-    ) -> U:
+    def or_else(self, obj: t.Callable[P, V] | V, *args: t.Any, **kwargs: t.Any) -> V:
         return apply(obj, *args, **kwargs)  # type: ignore
-
-    def unwrap_or_else(
-        self, obj: t.Callable[P, U], *args: P.args, **kwargs: P.kwargs
-    ) -> U:
-        return self.or_else(obj, *args, **kwargs)
 
     def or_if_falsy(
         self, obj: t.Callable[P, U] | U, *args: P.args, **kwargs: P.kwargs
@@ -251,10 +254,7 @@ class Empty(OptionContainer[None]):
             raise EmptyError("Option is empty")
         raise exc
 
-    def map(
-        self,
-        func: t.Callable,
-    ) -> "Empty":
+    def map(self, func: t.Callable[[t.Any], t.Any]) -> "Empty":
         return self
 
     def __iter__(self) -> "t.Iterator[Empty]":
@@ -272,46 +272,17 @@ class Empty(OptionContainer[None]):
     def __str__(self) -> str:
         return "<Empty>"
 
+    def flatten(self) -> "Empty":
+        """
+        Flatten the container i.e. transform Some(Some(x)) into Some(x).
+
+        Returns:
+            Some | Empty: _description_
+        """
+        return Null
+
 
 T_err = t.TypeVar("T_err", bound=Exception, covariant=True)
-
-
-# @t.overload
-# def unravel_container(
-#    value: T,  # not a some
-#    last_container: T | None = None,
-# ) -> tuple[T, T | None]:
-#    ...
-
-
-# @t.overload
-# def unravel_container(
-#    value: Some[Some[Some[U]]],
-# ) -> tuple[U, Some[U]]:
-#    ...
-
-
-# @t.overload
-# def unravel_container(
-#    value: t.Any,
-#    last_container: t.Any | None = None,
-# ) -> tuple[t.Any, t.Any]:
-#    ...
-
-
-# @t.overload
-# def unravel_container(
-#    value: Some[Some[T]],
-# ) -> Some[T]:
-#    ...
-
-
-def unravel_container(value):
-    match value:
-        case Some(under) | Empty(under):
-            return unravel_container(under)
-        case _:
-            return value
 
 
 OPT_MATCHABLE_CLASSES = {Some, Empty}
@@ -323,7 +294,7 @@ T_opt = t.TypeVar("T_opt")
 
 
 @t.overload
-def option(value: None) -> Empty:
+def option(value: None) -> Empty:  # type: ignore[misc]
     ...
 
 
@@ -332,8 +303,7 @@ def option(value: T_opt) -> Some[T_opt]:
     ...
 
 
-def option(value: T_opt) -> Some[T_opt] | Empty:
-    """ """
+def option(value: T_opt | None) -> Some[T_opt] | Empty:
     return Null if value is None else Some(value)
 
 
