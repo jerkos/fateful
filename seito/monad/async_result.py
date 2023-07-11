@@ -23,16 +23,14 @@ T_err = t.TypeVar("T_err", bound=Exception, covariant=True)
 
 
 async def _exec(
-    fn: t.Callable[P_mapper, U] | t.Callable[P_mapper, t.Awaitable[U]],
+    fn: t.Callable[P_mapper, t.Any],
     *a: P_mapper.args,
     **kw: P_mapper.kwargs,
-) -> U:
-    if not callable(fn):
-        return t.cast(U, fn)
-    current_result: U | t.Awaitable[U] = fn(*a, **kw)  # type: ignore
+) -> t.Any:
+    current_result: t.Any | t.Awaitable[t.Any] = fn(*a, **kw)
     while asyncio.iscoroutine(current_result) or isawaitable(current_result):
         current_result = await current_result
-    return t.cast(U, current_result)
+    return current_result
 
 
 class AsyncTryBase(abc.ABC, t.Generic[P, V_co, T_err]):
@@ -53,7 +51,6 @@ class AsyncTryBase(abc.ABC, t.Generic[P, V_co, T_err]):
         self,
         fn: t.Callable[[V_co], T_output]
         | t.Callable[[V_co], t.Awaitable[T_output]]
-        | T_output,
     ) -> "AsyncTryBase[P, T_output, T_err]":
         ...
 
@@ -61,30 +58,10 @@ class AsyncTryBase(abc.ABC, t.Generic[P, V_co, T_err]):
     async def for_each(self, fn: t.Callable[[V_co | T_err], None]) -> None:
         ...
 
-    @t.overload
     @abc.abstractmethod
     def recover(
         self,
-        fn: t.Callable[P_mapper, V_co] | t.Callable[P_mapper, t.Awaitable[V_co]],
-        *args: P_mapper.args,
-        **kwargs: P_mapper.kwargs,
-    ) -> "AsyncTryBase[P, V_co, T_err]":
-        ...
-
-    @t.overload
-    @abc.abstractmethod
-    def recover(
-        self,
-        fn: V_co,  # type: ignore
-        *args: t.Any,
-        **kwargs: t.Any,
-    ) -> "AsyncTryBase[P, V_co, T_err]":
-        ...
-
-    @abc.abstractmethod
-    def recover(
-        self,
-        fn: t.Callable[P_mapper, V_co] | t.Callable[P_mapper, t.Awaitable[V_co]] | V_co,
+        fn: t.Callable[P_mapper, t.Awaitable[V_co]] | t.Callable[P_mapper, V_co] | V_co,
         *args: t.Any,
         **kwargs: t.Any,
     ) -> "AsyncTryBase[P, V_co, T_err]":
@@ -93,9 +70,7 @@ class AsyncTryBase(abc.ABC, t.Generic[P, V_co, T_err]):
     @abc.abstractmethod
     async def or_else(
         self,
-        obj: t.Callable[P_mapper, T_output]
-        | t.Callable[P_mapper, t.Awaitable[T_output]]
-        | T_output,
+        obj: t.Callable[P_mapper, t.Any] | t.Callable[P_mapper, t.Any] | t.Any,
         *args: t.Any,
         **kwargs: t.Any,
     ):
@@ -162,8 +137,7 @@ class AsyncTry(AsyncTryBase[P, V_co, T_err]):
 
     async def _exec(
         self,
-        fn: t.Callable[P_mapper, T_output]
-        | t.Callable[P_mapper, t.Awaitable[T_output]],
+        fn: t.Callable[P_mapper, t.Awaitable[T_output]],
         *args: P_mapper.args,
         **kwargs: P_mapper.kwargs,
     ) -> Result[T_output, T_err]:
@@ -220,18 +194,18 @@ class AsyncTry(AsyncTryBase[P, V_co, T_err]):
         | T_output,
         *args: P_mapper.args,
         **kwargs: P_mapper.kwargs,
-    ) -> T_output | t.Any:
+    ) -> T_output | V_co:
         """ """
         result = await self._execute()
         if predicate(result):
-            return await _exec(or_f, *args, **kwargs)  # type: ignore
+            if not callable(or_f):
+                return or_f
+            return await _exec(or_f, *args, **kwargs)
         return result.get()
 
     def map(
         self,
-        fn: t.Callable[[V_co], T_output]
-        | t.Callable[[V_co], t.Awaitable[T_output]]
-        | T_output,
+        fn: t.Callable[[V_co], T_output] | t.Callable[[V_co], t.Awaitable[T_output]],
     ) -> "AsyncTry[P, T_output, T_err]":
         """
         Map the result of the underlying function to a new value.
@@ -245,8 +219,8 @@ class AsyncTry(AsyncTryBase[P, V_co, T_err]):
         """
 
         async def compose(*args: P.args, **kwargs: P.kwargs) -> T_output:
-            result: V_co = await _exec(self._under, *args, **kwargs)  # type: ignore
-            r: T_output = await _exec(fn, result)  # type: ignore
+            result: V_co = await _exec(self._under, *args, **kwargs)
+            r: T_output = await _exec(fn, result)
             return r
 
         r: AsyncTry[P, T_output, T_err] = AsyncTry(compose, self.errors)
@@ -267,7 +241,7 @@ class AsyncTry(AsyncTryBase[P, V_co, T_err]):
 
     def recover(
         self,
-        fn: t.Callable[P_mapper, V_co] | t.Callable[P_mapper, t.Awaitable[V_co]] | V_co,
+        fn: t.Callable[P_mapper, t.Awaitable[V_co]] | t.Callable[P_mapper, V_co] | V_co,
         *a: t.Any,
         **kw: t.Any,
     ) -> "AsyncTry[P, V_co, T_err]":
@@ -281,11 +255,13 @@ class AsyncTry(AsyncTryBase[P, V_co, T_err]):
             AsyncResult[P, V, T_err]:
         """
 
-        async def compose(*args: P.args, **kwargs: P.kwargs) -> V_co:
+        async def compose(*p_args: P.args, **p_kwargs: P.kwargs) -> V_co:
             try:
-                result: V_co = await _exec(self._under, *args, **kwargs)  # type: ignore
+                result: V_co = await _exec(self._under, *p_args, **p_kwargs)
             except Exception:
-                result: V_co = await _exec(fn, *a, **kw)  # type: ignore
+                if not callable(fn):
+                    return fn
+                result = await _exec(fn, *a, **kw)
             return result
 
         r: AsyncTry[P, V_co, T_err] = AsyncTry(compose, self.errors)
@@ -310,25 +286,6 @@ class AsyncTry(AsyncTryBase[P, V_co, T_err]):
         result = await self._execute()
         return result.or_none()
 
-    @t.overload
-    async def or_else(
-        self,
-        obj: t.Callable[P_mapper, T_output]
-        | t.Callable[P_mapper, t.Awaitable[T_output]],
-        *args: P_mapper.args,
-        **kwargs: P_mapper.kwargs,
-    ) -> T_output:
-        ...
-
-    @t.overload
-    async def or_else(
-        self,
-        obj: T_output,
-        *args: t.Any,
-        **kwargs: t.Any,
-    ) -> T_output:
-        ...
-
     async def or_else(
         self,
         obj: t.Callable[P_mapper, T_output]
@@ -336,7 +293,7 @@ class AsyncTry(AsyncTryBase[P, V_co, T_err]):
         | T_output,
         *args: t.Any,
         **kwargs: t.Any,
-    ) -> T_output:
+    ) -> T_output | V_co:
         """
         Get the result of the underlying function or the result of the given function if
         the result is an Err.
@@ -345,9 +302,7 @@ class AsyncTry(AsyncTryBase[P, V_co, T_err]):
         def check_value(step_result: t.Any) -> bool:
             return isinstance(step_result, (Err, Exception)) or (step_result is None)
 
-        return await self._execute_or_clause_if(
-            check_value, obj, *args, **kwargs  # type: ignore
-        )  # type: ignore
+        return await self._execute_or_clause_if(check_value, obj, *args, **kwargs)
 
     async def or_raise(self, exc: Exception | None = None) -> t.Any | None:
         """
@@ -371,8 +326,8 @@ class AsyncTry(AsyncTryBase[P, V_co, T_err]):
         """ """
 
         async def compose(*args: P.args, **kwargs: P.kwargs) -> t.Any:
-            result: V_co = await _exec(self._under, *args, **kwargs)  # type: ignore
-            r: t.Any = await _exec(getattr, result, name)  # type: ignore
+            result: V_co = await _exec(self._under, *args, **kwargs)
+            r: t.Any = await _exec(getattr, result, name)
             return r
 
         r = AsyncTry(compose, self.errors)
