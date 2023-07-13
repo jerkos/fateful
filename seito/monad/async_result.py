@@ -403,6 +403,7 @@ class AsyncTry(AsyncTryBase[P, V_co, T_err]):
         ```python linenums="1"
         x = AsyncResult(f, ZeroDivisionError)
         await x(1).get() # 2.0
+        ```
         """
         result = await self._execute()
         return result.get()
