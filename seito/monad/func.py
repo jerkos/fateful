@@ -12,12 +12,19 @@ T = t.TypeVar("T")
 
 
 def identity(x: T) -> T:
-    """ """
+    """
+    identity function
+    """
     return x
 
 
 def raise_err(err):
-    """ """
+    """
+    return a function that raises an error
+
+    Args:
+        err (_type_): _description_
+    """
 
     def inner():
         raise err
@@ -26,7 +33,15 @@ def raise_err(err):
 
 
 def raise_error(error: Exception):  # pragma: no cover
-    """ """
+    """
+    raise an error directly
+
+    Args:
+        error (Exception): _description_
+
+    Raises:
+        error: _description_
+    """
     raise error
 
 
@@ -41,13 +56,6 @@ class MatchError(TypeError):
 P = t.ParamSpec("P")
 
 
-def apply(f: t.Callable[P, T] | T, *args: P.args, **kwargs: P.kwargs) -> T:
-    """ """
-    if callable(f):
-        return f(*args, **kwargs)
-    return f
-
-
 T_co = t.TypeVar("T_co", covariant=True)
 S_co = t.TypeVar("S_co", covariant=True)
 V = t.TypeVar("V")
@@ -55,7 +63,9 @@ Q = t.TypeVar("Q")
 
 
 class When(t.Generic[T_co, S_co]):
-    """ """
+    """
+    Dealing with pattern matching in a functional way.
+    """
 
     def __init__(self, value: "MatchableMixin[T_co]"):
         self.value = value
@@ -76,7 +86,12 @@ when = When
 
 @dataclass
 class Default(t.Generic[V]):
-    """ """
+    """
+    Default value for pattern matching.
+
+    Args:
+        t (_type_): _description_
+    """
 
     def __init__(self):
         self.action: t.Callable[[], V] | V | None = None
@@ -96,6 +111,15 @@ Nested: t.TypeAlias = "MatchableMixin[Q | Nested[Q]]"
 
 
 def convert_to_dict(obj: dict[str, t.Any]) -> dict[str, t.Any]:
+    """
+    convert a dataclass to a dict without deep copying it
+
+    Args:
+        obj (dict[str, t.Any]): _description_
+
+    Returns:
+        dict[str, t.Any]: _description_
+    """
     for key, value in obj.items():
         if dataclasses.is_dataclass(value):
             obj[key] = value.__dict__
@@ -104,6 +128,20 @@ def convert_to_dict(obj: dict[str, t.Any]) -> dict[str, t.Any]:
 
 
 class MatchableMixin(t.Generic[T_co]):
+    """
+    Mixin class for pattern matching.
+
+    Args:
+        t (_type_): _description_
+
+    Raises:
+        MatchError: _description_
+        MatchError: _description_
+
+    Returns:
+        _type_: _description_
+    """
+
     __matchable_classes__: t.ClassVar[set[t.Any]] = set()
 
     @t.overload
@@ -204,7 +242,7 @@ class MatchableMixin(t.Generic[T_co]):
         for w in whens:
             if isinstance(w, Default):
                 assert w.action is not None
-                return apply(w.action)  # type: ignore[arg-type]
+                return w.action()
 
             when_inst = w
             if not isinstance(when_inst, When):
@@ -231,5 +269,5 @@ class MatchableMixin(t.Generic[T_co]):
                         if len(extracted) == 1:
                             return extracted[0]
                         return extracted
-                    return apply(when_inst.action, *extracted)  # type: ignore[arg-type]
+                    return when_inst.action(*extracted)
         raise MatchError(f"No default guard found, enable to match {self}")

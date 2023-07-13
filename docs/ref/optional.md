@@ -1,1 +1,0 @@
-::: seito.monad.option

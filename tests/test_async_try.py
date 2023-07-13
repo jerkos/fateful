@@ -13,7 +13,7 @@ class A:
     x = 1
 
 
-async def add_async(a, b):
+async def add_async(a: int, b: int) -> int:
     await asyncio.sleep(0.1)
     return a + b
 
@@ -45,10 +45,18 @@ async def async_a():
 
 @pytest.mark.asyncio
 async def test_async_opt():
-    value = await async_try(add_async)(1, 1).or_else(obj=lambda: 4)
+    value = await async_try(add_async)(1, 1).or_else(lambda: 4)
     assert_that(value).is_equal_to(2)
 
+    def iden(x: int) -> int:
+        return x
+
+    x = await async_try(add_async)(1, 1).or_else(iden, 1)
+    await async_try(add_async)(1, 1).recover(iden, 1).get()
     value = await async_try(async_none).or_else(lambda: 1)
+
+    value = await async_try(async_none).recover_with(1).get()
+
     assert_that(value).is_equal_to(None)
 
     value = await async_try(add_async)(1, 2).map(lambda x: x * 2).get()
@@ -105,7 +113,7 @@ async def test_async_opt():
     async for val in async_try(async_identity)(1):
         assert_that(val).is_equal_to(1)
     #
-    assert_that(await async_try(async_raise).or_else(1)).is_equal_to(1)
+    assert_that(await async_try(async_raise).or_(1)).is_equal_to(1)
     #
     assert_that(await async_try(async_raise).or_else(add_async, 1, 2)).is_equal_to(3)
     #
@@ -136,7 +144,7 @@ async def test_async_opt():
         return a / b
 
     assert_that(await test_async_(1, 1).get()).is_equal_to(1.0)
-    assert_that(await test_async_(1, 0).recover(1).get()).is_equal_to(1)
+    assert_that(await test_async_(1, 0).recover_with(1).get()).is_equal_to(1)
     assert_that(
         await test_async_(1, 0).map(lambda x: x + 1).recover(lambda: 1).get()
     ).is_equal_to(1)
@@ -162,3 +170,10 @@ async def test_async_opt():
     )(1, 1)
 
     result = await a_test.execute()
+
+    async def f(x: int) -> float:
+        return 1 / x
+
+    x = AsyncTry(f, ZeroDivisionError)
+    await x(1).map(lambda x: x + 1).or_(0.0)
+    await x(0).map(lambda x: str(x)).or_("")

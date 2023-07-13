@@ -69,4 +69,6 @@ async def http_call():
 
 Throws a client error
 
+## 💻 API reference
 
+::: seito.http

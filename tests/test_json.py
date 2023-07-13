@@ -15,13 +15,13 @@ class Test(unittest.TestCase):
     def test_john_object(self):
         i = js({"z-index": 1000})
 
-        self.assertEqual(i["z-index"].or_else(0), 1000)
+        self.assertEqual(i["z-index"].or_(0), 1000)
         i["toto"] = [1, 2, 3]
         i.toto = [4, 5, 6]
         i.zozo.or_(12)
 
         str(i)
-        self.assertEqual(i["zindex"].or_else(0), 0)
+        self.assertEqual(i["zindex"].or_(0), 0)
         json_obj = js(a=12, k=13, c={1: 3})
         self.assertEqual(json_obj.a.get(), 12)
         # self.assertEqual(i.toto.map(lambda x: x.to_list()).or_none(), [4, 5, 6])

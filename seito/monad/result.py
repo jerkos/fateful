@@ -4,7 +4,6 @@ import typing as t
 from dataclasses import dataclass
 
 from seito.monad.container import CommonContainer
-from seito.monad.func import apply
 
 T_co = t.TypeVar("T_co", covariant=True)
 U = t.TypeVar("U")
@@ -23,10 +22,17 @@ class ResultContainer(CommonContainer[T_co], abc.ABC):
     @abc.abstractmethod
     def recover(
         self,
-        obj: t.Callable[P, U] | U,
-        *args: t.Any,
-        **kwargs: t.Any,
+        obj: t.Callable[P, U],
+        *args: P.args,
+        **kwargs: P.kwargs,
     ) -> "Ok[U] | t.Any":  # pragma: no cover
+        ...
+
+    @abc.abstractmethod
+    def recover_with(
+        self,
+        obj: U,
+    ) -> "Ok[U | T_co]":  # pragma: no cover
         ...
 
     @property
@@ -54,27 +60,27 @@ class Ok(ResultContainer[T_co]):
     def get(self) -> T_co:
         return self._under
 
-    @t.overload
-    def or_else(self, obj: t.Callable[P, U], *args: P.args, **kwargs: P.kwargs) -> U:
-        ...
+    def or_(self, obj: t.Any) -> T_co:
+        return self._under
 
-    @t.overload
-    def or_else(self, obj: U, *args: t.Any, **kwargs: t.Any) -> U:
-        ...
-
-    def or_else(self, obj: t.Callable[P, U] | U, *args: t.Any, **kwargs: t.Any) -> U:
-        return t.cast(U, self._under)
+    def or_else(
+        self, obj: t.Callable[P, t.Any], *args: P.args, **kwargs: P.kwargs
+    ) -> T_co:
+        return self._under
 
     def or_raise(self, exc: Exception | None = None) -> T_co:
         return self._under
 
+    def recover_with(self, obj: U) -> "Ok[U | T_co]":
+        return self
+
     def recover(
         self,
-        obj: t.Callable[P, U] | t.Callable[P, t.Awaitable[U]] | U,
+        obj: t.Callable[P, U | t.Awaitable[U]],
         *args: P.args,
         **kwargs: P.kwargs,
-    ) -> "Ok[U]":
-        return t.cast(Ok[U], self)
+    ) -> "Ok[U | T_co]":
+        return self
 
     def map(self, fn: t.Callable[[T_co], U]) -> "Ok[U] | Err[Exception]":
         return sync_try(fn)(self._under)
@@ -143,31 +149,16 @@ class Err(ResultContainer[T_error]):
     def unwrap(self) -> T_error:
         return self._under
 
-    @t.overload
+    def recover_with(self, obj: U) -> Ok[U]:
+        return Ok(obj)
+
     def recover(
         self,
         obj: t.Callable[P, U],
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> Ok[U]:
-        ...
-
-    @t.overload
-    def recover(
-        self,
-        obj: U,
-        *args: t.Any,
-        **kwargs: t.Any,
-    ) -> Ok[U]:
-        ...
-
-    def recover(
-        self,
-        obj: t.Callable[P, U] | U,
-        *args: t.Any,
-        **kwargs: t.Any,
-    ) -> Ok[U]:
-        return Ok(apply(obj, *args, **kwargs))
+        return Ok(obj(*args, **kwargs))
 
     def is_error(self):
         return True
@@ -178,16 +169,11 @@ class Err(ResultContainer[T_error]):
     def get(self) -> t.NoReturn:
         raise self._under
 
-    @t.overload
+    def or_(self, obj: U) -> U:
+        return obj
+
     def or_else(self, obj: t.Callable[P, U], *args: P.args, **kwargs: P.kwargs) -> U:
-        ...
-
-    @t.overload
-    def or_else(self, obj: U, *args: t.Any, **kwargs: t.Any) -> U:
-        ...
-
-    def or_else(self, obj: t.Callable[P, U] | U, *args: t.Any, **kwargs: t.Any) -> U:
-        return apply(obj, *args, **kwargs)
+        return obj(*args, **kwargs)
 
     def or_raise(self, exc: Exception | None = None) -> t.NoReturn:
         if exc is not None:

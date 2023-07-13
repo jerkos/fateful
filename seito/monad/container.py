@@ -21,7 +21,7 @@ class MappableContainerMixin(t.Generic[T_co], abc.ABC):
     @abc.abstractmethod
     def map(
         self, fn: t.Callable[[t.Any], V]
-    ) -> "MappableContainerMixin[V | Exception | None | T_co]":  # pragma: no cover
+    ) -> "MappableContainerMixin[V | Exception | T_co]":  # pragma: no cover
         ...
 
 
@@ -42,9 +42,14 @@ class CommonContainer(MappableContainerMixin[T_co], MatchableMixin[T_co], abc.AB
         return self.get()
 
     @abc.abstractmethod
+    def or_(self, obj: V | T_co) -> V | T_co:
+        """ """
+        ...  # pragma: no cover
+
+    @abc.abstractmethod
     def or_else(
-        self, obj: t.Callable[P, V] | V, *args: t.Any, **kwargs: t.Any
-    ) -> t.Any:
+        self, obj: t.Callable[P, V], *args: P.args, **kwargs: P.kwargs
+    ) -> V | T_co:
         """ """
         ...  # pragma: no cover
 
