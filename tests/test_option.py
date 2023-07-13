@@ -40,7 +40,7 @@ class Test(unittest.TestCase):
         value = 1
         self.assertEqual(none.or_(value), 1)
         self.assertEqual(none.or_else(lambda: 1), 1)
-        self.assertEqual(option(value).map(lambda v: v + 1).or_else(0), 2)
+        self.assertEqual(option(value).map(lambda v: v + 1).or_(0), 2)
 
     def test_option_map(self):
         none_value = None
@@ -52,25 +52,30 @@ class Test(unittest.TestCase):
 
         uppercase = "VALUE"
         self.assertEqual(
-            option(uppercase).map(lambda value: value.lower()).or_else(""), "value"
+            option(uppercase).map(lambda value: value.lower()).or_(""), "value"
         )
 
     def test_option_iteration(self):
         value = 1
         for v in option(value):
             self.assertEqual(v, 1)
-        self.assertEqual(list(opt(None)), [])
+
+        result = ""
+        for v in none:
+            result = "none"
+        self.assertEqual(result, "")
+        self.assertEqual(list(none), [])
 
     def test_option_forwarding(self):
         value = "VALUE"
-        self.assertEqual(option(value).lower().or_else(""), "value")
-        self.assertEqual(none.lower().or_else(""), "")
-        self.assertEqual(none.toto().or_else("titi"), "titi")
-        self.assertEqual(option("TOTO").capitalizes().or_else("t"), "t")
-        self.assertEqual(option("toto").capitalize().or_else("failed"), "Toto")
+        self.assertEqual(option(value).lower().or_(""), "value")
+        self.assertEqual(none.lower().or_(""), "")
+        self.assertEqual(none.toto().or_("titi"), "titi")
+        self.assertEqual(option("TOTO").capitalizes().or_("t"), "t")
+        self.assertEqual(option("toto").capitalize().or_("failed"), "Toto")
         self.assertEqual(option("riri").count("ri").get(), 2)
         self.assertEqual(option(A(5)).x.get(), 5)
-        self.assertEqual(option(A(5)).z.or_else(0), 0)
+        self.assertEqual(option(A(5)).z.or_(0), 0)
         # option("value")()
 
     def test_nested_option(self):
@@ -79,13 +84,13 @@ class Test(unittest.TestCase):
             self.assertEqual(n, "tata")
 
     def test_if_false(self):
-        op = opt("value").or_else("")
+        op = opt("value").or_("")
         self.assertEqual(len(op), 5)
         print(option("value").get_or("") is none)
 
         self.assertEqual(opt("value").or_none(), "value")
         self.assertEqual(opt("value").or_raise(ValueError()), "value")
-        self.assertEqual(option([]).or_if_falsy(lambda: [1, 2, 3]), [1, 2, 3])
+        self.assertEqual(option([]).or_if_falsy([1, 2, 3]), [1, 2, 3])
 
     def test_flat_map(self):
         nested_none = (
@@ -189,7 +194,7 @@ class Test(unittest.TestCase):
                 value = None
         assert_that(value).is_equal_to((5, {3: 12}))
 
-        self.assertEqual(none.or_if_falsy(lambda x: x + 1, 1), 2)
+        self.assertEqual(none.or_else_if_falsy(lambda x: x + 1, 1), 2)
 
         with self.assertRaises(EmptyError):
             none.or_raise(EmptyError())
@@ -223,9 +228,9 @@ class Test(unittest.TestCase):
 
         lifted = lift_opt(divide)
         with pytest.raises(ZeroDivisionError):
-            val = lifted(1, 0).or_else(1)
+            val = lifted(1, 0).or_(1)
 
-        val = lifted(0, 1).or_else(0)
+        val = lifted(0, 1).or_(0)
         self.assertEqual(val, 0)
 
     def test_pampy_match(self):
@@ -256,9 +261,9 @@ class Test(unittest.TestCase):
             cc = opt(1)
             cc.match(Ok(_) >> identity)
 
-        Some(Some(1))
+        vvv = Some(Some(1))
 
-        # hh = vvv.match(Some(Some(_)) >> identity, default >> 10)
+        vvv.match(Some(Some(_)) >> identity, default >> 10)
         # assert_that(hh).is_equal_to(1)
 
         opt(1).match(Some(_) >> (lambda x: str(x)))

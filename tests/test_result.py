@@ -23,9 +23,9 @@ def test_all():
 
 
 def test_opt():
-    value = sync_try(error)(1).or_else("failure here")
+    value = sync_try(error)(1).or_("failure here")
     assert_that(value).is_equal_to("failure here")
-    value = sync_try(success)(1).or_else("failure here")
+    value = sync_try(success)(1).or_("failure here")
     assert_that(value).is_equal_to(1)
 
 
@@ -60,7 +60,7 @@ def test_on_error():
 def tests_misc():
     assert_that(Ok(1).or_none()).is_equal_to(1)
     assert_that(Ok(1).map(lambda x: x * 2).get()).is_equal_to(2)
-    assert_that(Ok(1).toto.or_else(1)).is_equal_to(1)
+    assert_that(Ok(1).toto.or_(1)).is_equal_to(1)
     assert_that(Err(ValueError()).unwrap()).is_instance_of(ValueError)
     assert_that(Err(ValueError()).is_error()).is_true()
     assert_that(Err(ValueError()).is_ok()).is_false()
@@ -112,3 +112,6 @@ def test_result_shortcut():
     val = test_error(0)
     assert_that(val).is_instance_of(Err)
     assert_that(val.unwrap()).is_instance_of(ZeroDivisionError)
+
+    hj = Ok(Ok(1))
+    hj.flatten()

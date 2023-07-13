@@ -1,31 +1,37 @@
+import abc
 import typing as t
 from dataclasses import dataclass
 
 from seito.monad.container import CommonContainer, EmptyError
-from seito.monad.func import apply
 
 T_co = t.TypeVar("T_co", covariant=True)
-U = t.TypeVar("U")
 V = t.TypeVar("V")
 P = t.ParamSpec("P")
 
 
-class OptionContainer(CommonContainer[T_co], t.Protocol):
+class OptionContainer(CommonContainer[T_co], abc.ABC):
+    @abc.abstractmethod
     def is_some(self) -> bool:  # pragma: no cover
         ...
 
+    @abc.abstractmethod
     def is_empty(self) -> bool:  # pragma: no cover
         ...
 
-    def or_if_falsy(
-        self, obj: t.Callable[P, t.Any] | t.Any, *args: P.args, **kwargs: P.kwargs
-    ) -> t.Any:  # pragma: no cover
+    @abc.abstractmethod
+    def or_if_falsy(self, obj: V) -> T_co | V:  # pragma: no cover
+        """ """
+        ...
+
+    @abc.abstractmethod
+    def or_else_if_falsy(
+        self, obj: t.Callable[P, V], *args: P.args, **kwargs: P.kwargs
+    ) -> T_co | V:  # pragma: no cover
         """ """
         ...
 
 
 Q = t.TypeVar("Q")
-
 
 Nested: t.TypeAlias = "Some[Q | Nested[Q]]"
 
@@ -41,7 +47,17 @@ class Some(OptionContainer[T_co]):
         get the value of the Some container
 
         Returns:
-            T: _description_
+            T: value of the container
+
+        ```python
+        x: Some[int] = opt(1).get()
+        assert Some(1).get() == 1
+
+        x: Empty = Null
+        x.get()  # raises EmptyError !
+
+
+        ```
         """
         return self._under
 
@@ -50,7 +66,15 @@ class Some(OptionContainer[T_co]):
         Check if the container is a Some.
 
         Returns:
-            bool: _description_
+            bool: true if the container is a Some, false otherwise.
+
+        ```python
+        x: Some[int] = opt(1)
+        assert x.is_some() == True
+
+        y = Null
+        assert y.is_some() == False
+        ```
         """
         return True
 
@@ -60,11 +84,19 @@ class Some(OptionContainer[T_co]):
 
         Returns:
             bool: True if the container is empty, False otherwise.
+
+         ```python
+        x = Null
+        assert x.is_empty() == True
+
+        y = Some(1)
+        assert y.is_empty() == False
+        ```
         """
         return False
 
     @t.overload
-    def flatten(self: "Nested[Empty]") -> "Empty":
+    def flatten(self: "Nested[Empty]") -> "Empty":  # type: ignore[misc]
         ...
 
     @t.overload
@@ -76,58 +108,111 @@ class Some(OptionContainer[T_co]):
         Flatten the container i.e. transform Some(Some(x)) into Some(x).
 
         Returns:
-            Some | Empty: _description_
+            Some | Empty: the flattened container.
+
+        ```python
+        x: Some[Some[int]] = Some(Some(1))
+        y: Some[int] = x.flatten()  # Some(1)
+        assert y == Some(1)
+
+        z: Some[Some[Empty]] = Some(Some(Null))
+        a = z.flatten()  # Empty
+        assert a == Null
+        ```
         """
         x = self._under
         while isinstance(x, (Some, Empty)):
             x = x._under  # type: ignore
         return opt(x)
 
-    @t.overload
-    def or_else(
-        self, obj: t.Callable[P, t.Any], *args: P.args, **kwargs: P.kwargs
-    ) -> T_co:
-        ...
+    def or_(self, obj: t.Any) -> T_co:
+        """
+        Return the value of the container.
+        Args:
+            obj (t.Any): an object
 
-    @t.overload
-    def or_else(self, obj: t.Any) -> T_co:
-        ...
+        Returns:
+            T_co: the value of the container.
 
-    def or_else(
-        self, obj: t.Callable[P, t.Any] | t.Any, *args: P.args, **kwargs: P.kwargs
-    ) -> T_co:
+        ```python
+        x: Some[int] = opt(1)
+        y = x.or_(2)  # 1
+        assert y == 1
+
+        z = Null
+        assert z.or_(2) == 2
+        ```
+        """
+        return self._under
+
+    def or_else(self, obj: t.Callable[P, V], *args: P.args, **kwargs: P.kwargs) -> V:
         """
         Apply a function to the value of the container.
         Args:
             obj (t.Callable[P, t.Any]): _description_
 
         Returns:
-            T: _description_
+            T: return the value of the container.
+
+        ```python
+        x: Some[int] = opt(1)
+        assert x.or_else(lambda z: z + 100, 1) == 1
+
+        y = Null
+        assert x.or_else(lambda z: z + 100, 1) == 101
+        ```
         """
-        return self._under
+        return t.cast(V, self._under)
 
     unwrap_or_else = or_else  # type: ignore[assignment]
 
-    def or_if_falsy(
-        self, obj: t.Callable[P, U], *args: P.args, **kwargs: P.kwargs
-    ) -> T_co | U:
+    def or_if_falsy(self, obj: V) -> T_co | V:
+        """
+        Return the value of the container or provided value if it is falsy.
+
+        Args:
+            obj (V): value to return if the container is falsy.
+
+        Returns:
+            T_co | V: value of the container or provided value if it is falsy.
+
+        ```python
+        x: Some[int] = opt(0)
+        assert x.or_if_falsy(1) == 1
+        ```
+        """
+        return self._under or obj
+
+    def or_else_if_falsy(
+        self, obj: t.Callable[P, V], *args: P.args, **kwargs: P.kwargs
+    ) -> T_co | V:
         """
         Apply a function to the value of the container if it is falsy.
 
         Args:
-            obj (t.Callable[P, U]): _description_
+            obj (t.Callable[P, U]): function to apply if contained value is falsy.
 
         Returns:
-            T | U: _description_
+            T | U: value of the container or result of the function if it is falsy.
+
+        ```python
+        x: Some[int] = opt(0)
+        assert x.or_else_if_falsy(lambda x: x + 101, 1) == 101
+        ```
         """
-        return self._under or apply(obj, *args, **kwargs)  # type: ignore[arg-type]
+        return self._under or obj(*args, **kwargs)
 
     def or_none(self) -> T_co:
         """
         Return the value of the container if it is not None.
 
         Returns:
-            T: _description_
+            T: returns the value of the container.
+
+        ```python
+        x: Some[int] = opt(0)
+        assert x.or_none() == 0  # 0
+        ```
         """
         return self._under
 
@@ -136,36 +221,50 @@ class Some(OptionContainer[T_co]):
         Return the value of the container if it is not None.
 
         Args:
-            exc (Exception | None, optional): _description_. Defaults to None.
+            exc (Exception | None, optional): Exception to raise. Defaults to None.
 
         Returns:
-            T: _description_
+            T: the underlying value of the container.
+
+        ```python
+        x: Some[int] = opt(0)
+        assert x.or_raise() == 0  # 0
+        ```
         """
         return self._under
 
-    def map(self, func: t.Callable[[T_co], U]) -> "Some[U]":
+    def map(self, func: t.Callable[[T_co], V]) -> "Some[V]":
         """
         Apply a function to the value of the container.
 
         Args:
-            func (t.Callable[[T], U]): _description_
+            func (t.Callable[[T], U]): function to apply on the underlying value.
 
         Returns:
-            Some[U]: _description_
+            Some[V]: Some if the function returns a value
+
+        ```python
+        x: Some[int] = opt(0)
+        assert x.map(lambda c: c + 1).get() == 1  # 1
+
+        y: Some[str] = opt(1).map(lambda c: str(c))
+        ```
         """
-        result = apply(func, self._under)  # type: ignore
-        result = opt(result)
-        return result
+        result = func(self._under)
+        opt_result = opt(result)
+        return opt_result
 
     def __iter__(self) -> t.Generator[T_co, t.Any, None]:
         """
         Iterate over the value of the container.
 
-        Returns:
-            t.Iterator[T]: _description_
-
         Yields:
             Iterator[t.Iterator[T]]: _description_
+
+        ```python
+        for i in opt(0):
+            print(i)  # 0
+        ```
         """
         yield self.flatten().get()
 
@@ -174,10 +273,18 @@ class Some(OptionContainer[T_co]):
         Get an attribute of the value of the container.
 
         Args:
-            name (str): _description_
+            name (str): name of the attribute.
 
         Returns:
-            Some | Empty | t.Callable: _description_
+            Some | Empty | t.Callable: Some if the attribute exists, Empty otherwise.
+
+        ```python
+        class Foo:
+            foo: int = 1
+        x: Some[Foo] = opt(Foo())
+        x.foo.get() == 1
+        assert x.bar.is_empty()  # True
+        ```
         """
         try:
             attr = getattr(self._under, name)
@@ -196,7 +303,11 @@ class Some(OptionContainer[T_co]):
         Return the string representation of the container.
 
         Returns:
-            str: _description_
+            str: a string representation of the container.
+
+        ```python
+        str(Some(1)) # "<Some 1>"
+        ```
         """
         return f"<Some {str(self._under)}>"
 
@@ -208,110 +319,203 @@ class Empty(OptionContainer[None]):
     _under: None = None
 
     def get(self) -> t.NoReturn:
+        """
+        Raise an EmptyError.
+
+        Raises:
+            EmptyError: because of getting on empty container.
+
+        Returns:
+            t.NoReturn: never returns.
+        """
         raise EmptyError("Option is empty")
 
     def is_some(self) -> bool:
+        """
+        Return False.
+
+        Returns:
+            bool: always False.
+        """
         return False
 
     def is_empty(self) -> bool:
+        """
+        Return True.
+
+        Returns:
+            bool: always True.
+        """
         return True
 
-    def or_(self, obj: U) -> U:
+    def or_(self, obj: V) -> V:
+        """
+        Return the provided value.
+
+        Args:
+            obj (V): provided value.
+
+        Returns:
+            V: provided value.
+
+        ```python
+        x: Empty = Null
+        assert x.or_(1) == 1
+        ```
+        """
         return obj
 
-    @t.overload
-    def or_else(self, obj: t.Callable[P, U], *args: P.args, **kwargs: P.kwargs) -> U:
-        ...
+    def or_else(self, obj: t.Callable[P, V], *args: P.args, **kwargs: P.kwargs) -> V:
+        """
+        Apply a function to produce a result. Computed lazily.
 
-    @t.overload
-    def or_else(self, obj: U) -> U:
-        ...
+        Args:
+            obj (t.Callable[P, V]): function to apply.
 
-    def or_else(
-        self, obj: t.Callable[P, U] | U, *args: P.args, **kwargs: P.kwargs
-    ) -> U:
-        return apply(obj, *args, **kwargs)  # type: ignore
+        Returns:
+            V: return the result of the function.
 
-    def unwrap_or_else(
-        self, obj: t.Callable[P, U], *args: P.args, **kwargs: P.kwargs
-    ) -> U:
-        return self.or_else(obj, *args, **kwargs)
+        ```python
+        x: Empty = Null
+        x.or_else(lambda: 1) == 1
+        ```
+        """
+        return obj(*args, **kwargs)
 
-    def or_if_falsy(
-        self, obj: t.Callable[P, U] | U, *args: P.args, **kwargs: P.kwargs
-    ) -> U:
-        x = apply(obj, *args, **kwargs)  # type: ignore
+    def or_if_falsy(self, obj: V) -> V:
+        """
+        Return the provided value.
+
+        Args:
+            obj (V): provided value.
+
+        Returns:
+            V: provided value.
+
+        ```python
+        x = Null
+        assert x.or_if_falsy(1) == 1
+        ```
+        """
+        return obj
+
+    def or_else_if_falsy(
+        self, obj: t.Callable[P, V], *args: P.args, **kwargs: P.kwargs
+    ) -> V:
+        """
+        Apply a function to produce a result. Computed lazily.
+
+        Args:
+            obj (t.Callable[P, V]): function to apply.
+
+        Returns:
+            V: result of the function.
+
+        ```python
+        x = Null
+        assert x.or_else_if_falsy(lambda x: 2**4, 1) == 1
+        ```
+        """
+        x = obj(*args, **kwargs) if callable(obj) else obj
         return x
 
     def or_none(self) -> None:
+        """
+        Return None.
+
+        Returns:
+            None: None.
+
+        ```python
+        x = Null
+        assert x.or_none() is None
+        ```
+        """
         return None
 
     def or_raise(self, exc: Exception | None = None) -> t.NoReturn:
+        """
+        Raise an exception.
+
+        Args:
+            exc (Exception | None, optional): Exception to be raised. Defaults to None.
+
+        Raises:
+            EmptyError: if no exception is provided.
+            exc: if an exception is provided.
+
+        Returns:
+            t.NoReturn: never returns.
+
+        ```python
+        x = Null
+        x.or_raise()  # raises EmptyError
+        x.or_raise(ValueError())  # raises ValueError
+        ```
+        """
         if exc is None:
             raise EmptyError("Option is empty")
         raise exc
 
-    def map(
-        self,
-        func: t.Callable,
-    ) -> "Empty":
+    def map(self, func: t.Callable[[t.Any], t.Any]) -> "Empty":
+        """
+        Return an empty container.
+
+        Args:
+            func (t.Callable[[t.Any], t.Any]): function to apply.
+
+        Returns:
+            Empty: an empty container.
+        """
         return self
 
     def __iter__(self) -> "t.Iterator[Empty]":
+        """
+        Return an empty iterator.
+
+        Returns:
+            t.Iterator[Empty]: empty iterator.
+        """
         return self
 
     def __next__(self):
         raise StopIteration()
 
     def __getattr__(self, name: str) -> "Empty":
+        """
+        Return an empty container.
+
+        Args:
+            name (str): name of the attribute.
+
+        Returns:
+            Empty: an empty container.
+        """
         return self
 
     def __call__(self, *args: t.Any, **kwargs: t.Any) -> "Empty":
+        """
+        Return an empty container.
+
+        Returns:
+            Empty: return an empty container.
+        """
         return self
 
     def __str__(self) -> str:
         return "<Empty>"
 
+    def flatten(self) -> "Empty":
+        """
+        Flatten the container.
+
+        Returns:
+            Empty: return self
+        """
+        return self
+
 
 T_err = t.TypeVar("T_err", bound=Exception, covariant=True)
-
-
-# @t.overload
-# def unravel_container(
-#    value: T,  # not a some
-#    last_container: T | None = None,
-# ) -> tuple[T, T | None]:
-#    ...
-
-
-# @t.overload
-# def unravel_container(
-#    value: Some[Some[Some[U]]],
-# ) -> tuple[U, Some[U]]:
-#    ...
-
-
-# @t.overload
-# def unravel_container(
-#    value: t.Any,
-#    last_container: t.Any | None = None,
-# ) -> tuple[t.Any, t.Any]:
-#    ...
-
-
-# @t.overload
-# def unravel_container(
-#    value: Some[Some[T]],
-# ) -> Some[T]:
-#    ...
-
-
-def unravel_container(value):
-    match value:
-        case Some(under) | Empty(under):
-            return unravel_container(under)
-        case _:
-            return value
 
 
 OPT_MATCHABLE_CLASSES = {Some, Empty}
@@ -323,7 +527,7 @@ T_opt = t.TypeVar("T_opt")
 
 
 @t.overload
-def option(value: None) -> Empty:
+def option(value: None) -> Empty:  # type: ignore[misc]
     ...
 
 
@@ -332,16 +536,15 @@ def option(value: T_opt) -> Some[T_opt]:
     ...
 
 
-def option(value: T_opt) -> Some[T_opt] | Empty:
-    """ """
+def option(value: T_opt | None) -> Some[T_opt] | Empty:
     return Null if value is None else Some(value)
 
 
-def lift_opt(f: t.Callable[P, U]) -> t.Callable[P, Some[U] | Empty]:
+def lift_opt(f: t.Callable[P, V]) -> t.Callable[P, Some[V] | Empty]:
     """ """
 
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Some[U] | Empty:
-        val: U = f(*args, **kwargs)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Some[V] | Empty:
+        val: V = f(*args, **kwargs)
         return opt(val)
 
     return wrapper

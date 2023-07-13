@@ -22,6 +22,7 @@ markdown_extensions:
   - attr_list
   - md_in_html
   - pymdownx.superfences
+  - pymdownx.critic
   - pymdownx.tabbed:
       alternate_style: true
 
@@ -29,17 +30,12 @@ plugins:
   - mkdocstrings:
 
 nav:
-  - Getting started: index.md
-  - Containers:
-    - Optional: containers/optional.md
-    - Result: containers/optional.md
-    - Async result: containers/async-optional.md
+  - 🔥 Getting started: index.md
+  - 💼 Containers:
+    - ❓ Option monad: containers/option.md
+    - ⚙️ Result monad: containers/result.md
+    - 🚀 Async try: containers/async-try.md
+  - Useful functions: func.md
   - Http helpers: http.md
   - Json helpers: json.md
-  - API ref:
-      - Sync optional: ref/optional.md
-      - Async optional: ref/async-opt.md
-      - Http: ref/http.md
-      - Json: ref/json-ref.md
-      - Func: ref/func.md
 

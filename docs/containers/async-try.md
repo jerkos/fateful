@@ -1,11 +1,11 @@
-# Async Optional
+# 🚀 Async try
 
-The aim of the class is to provide the same functions as the `Result` container class
+The aim of the class is to provide the same functions as the {==Result container==} class
 in an asynchronous way
 
 using asyncio, we often write this, which is fairly convenient
 
-```py
+```py linenums="1"
 import asyncio
 
 async def wait_for(value, *, time=100):
@@ -20,7 +20,7 @@ async def main():
 
 With async result we can do this:
 
-```py
+```py linenums="1"
 import asyncio
 from seito.monad.async_result import async_try
 
@@ -52,7 +52,7 @@ The Async result container is useful especially when dealing with error
 
 Considering this function:
 
-```py
+```py linenums="1"
 import random
 import logging
 import asyncio
@@ -75,7 +75,7 @@ async def main():
 
 *main* function could be rewritten as:
 
-```py
+```py linenums="1"
 import random
 from seito.monad.async_result import AsyncResult
 
@@ -89,9 +89,13 @@ async def main():
         await AsyncResult.of(
             wait_for, random.randint()
         ).match(
-            Result(_),
+            Ok(_),
             Err(_) >> reraise
             default >> 0
         )
     )
 ```
+
+## 💻 API reference
+
+::: seito.monad.async_result
