@@ -3,7 +3,7 @@ import typing as t
 
 import typing_extensions as te
 
-from seito.monad.func import MatchableMixin
+from fateful.monad.func import MatchableMixin
 
 
 class EmptyError(ValueError):

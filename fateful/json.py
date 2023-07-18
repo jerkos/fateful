@@ -1,8 +1,8 @@
 import typing
 from typing import Any, Mapping, Type
 
-from seito.monad.option import Empty, Some, none, opt
-from seito.monad.result import sync_try
+from fateful.monad.option import Empty, Some, none, opt
+from fateful.monad.result import sync_try
 
 try:
     import orjson as json  # type: ignore

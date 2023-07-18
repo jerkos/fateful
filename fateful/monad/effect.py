@@ -1,7 +1,7 @@
 import dataclasses
 import typing as t
 
-from seito.monad.container import MappableContainerMixin
+from fateful.monad.container import MappableContainerMixin
 
 T_wrapped_type = t.TypeVar("T_wrapped_type")
 T_output = t.TypeVar("T_output")

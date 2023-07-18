@@ -3,10 +3,10 @@ import asyncio
 import pytest
 from assertpy import assert_that
 
-from seito.monad.async_result import AsyncTry, async_try, lift_future
-from seito.monad.func import _, default
-from seito.monad.option import Some, opt
-from seito.monad.result import Ok
+from fateful.monad.async_result import AsyncTry, async_try, lift_future
+from fateful.monad.func import _, default
+from fateful.monad.option import Some, opt
+from fateful.monad.result import Ok
 
 
 class A:

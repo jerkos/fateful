@@ -2,7 +2,7 @@ import abc
 import typing as t
 from dataclasses import dataclass
 
-from seito.monad.container import CommonContainer, EmptyError
+from fateful.monad.container import CommonContainer, EmptyError
 
 T_co = t.TypeVar("T_co", covariant=True)
 V = t.TypeVar("V")

@@ -1,7 +1,7 @@
 import pytest
 from assertpy import assert_that
 
-from seito.monad.result import Err, Ok, result_shortcut, sync_try, to_result
+from fateful.monad.result import Err, Ok, result_shortcut, sync_try, to_result
 
 
 def error(x: int) -> float:

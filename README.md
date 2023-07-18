@@ -1,10 +1,10 @@
-# seito
+# fateful
 
 *Option* and *Result* container for python !
 
-![seito](./docs/img/seito.png)
+![fateful](./docs/img/fateful.png)
 
-documentation: https://jerkos.github.io/seito/
+documentation: https://jerkos.github.io/fateful/
 
 Python has some great functional features. The most notable ones are list / dict
 comprehensions. However, when you start to chain function calls (or predicate
@@ -35,7 +35,7 @@ When you do not know if a value is None or is actually a real value / object, us
 to wrap it into an option
 
 ``` python
-from seito import opt, Null, Some
+from fateful import opt, Null, Some
 
 # Null is a singleton which is basically Empty(None)
 >>> opt('value').or_('new value')
@@ -84,7 +84,7 @@ It supports also forwarding a value
 A option value can be transformed into another enabling chaining operation
 
 ```python
-from seito.monad.option import option
+from fateful.monad.option import option
 result = option("some").map(lambda x: len(x) * 2).or_(0)
 ```
 
@@ -100,7 +100,7 @@ x: Some[int] = Some(Some(Some(1))).flatten()
 We can lift an function to return an *option* type using a decorator
 
 ```python
-from seito.monad.option import lift_option
+from fateful.monad.option import lift_option
 
 @lift_option
 def maybe(value: int):
@@ -129,7 +129,7 @@ The Result Monad offers several benefits:
 def may_fail(x: int) -> float:
     return 1 / x
 
-from seito.monad.try_ import Try
+from fateful.monad.try_ import Try
 
 result = Try.of(may_fail).on_error((ZeroDivisionError,))(1).or_(10.0)
 assert result == 1.0
@@ -183,7 +183,7 @@ Wraps aihttp for perform http call and parsing results optionnaly as json
 Miscellaneous functions dealing with json (parsing, manipulating...)
 
 ``` python
->>> from seito.json import obj
+>>> from fateful.json import obj
 >>> i = obj({'z-index': 1000})
 >>> i.toto = [4, 5, 6]
 >>> str(i)

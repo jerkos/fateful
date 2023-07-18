@@ -3,7 +3,7 @@ import unittest
 from dataclasses import dataclass
 from json import JSONDecodeError
 
-from seito.json import JsArray, JsObject, js, parse, try_parse
+from fateful.json import JsArray, JsObject, js, parse, try_parse
 
 
 @dataclass

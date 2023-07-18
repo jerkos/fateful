@@ -1,6 +1,6 @@
-site_name: Seito
-repo_url: https://github.com/jerkos/seito
-repo_name: seito
+site_name: Fateful
+repo_url: https://github.com/jerkos/fateful
+repo_name: fateful
 theme:
   #features:
   #  - navigation.tabs
