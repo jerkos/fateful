@@ -5,4 +5,4 @@ __Err(exception)__
 
 ## 💻 API reference
 
-::: seito.monad.result
+::: fateful.monad.result

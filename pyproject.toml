@@ -19,7 +19,7 @@ requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [project]
-name = "seito"
+name = "fateful"
 version = "0.2.6"
 description = "rusty container"
 authors = [

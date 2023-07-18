@@ -2,10 +2,10 @@ import aiohttp
 import pytest
 from assertpy import assert_that
 
-from seito.http import HttpMethods, get, request, try_get
-from seito.monad.async_result import async_try
-from seito.monad.func import _, default, identity
-from seito.monad.result import Err, Ok
+from fateful.http import HttpMethods, get, request, try_get
+from fateful.monad.async_result import async_try
+from fateful.monad.func import _, default, identity
+from fateful.monad.result import Err, Ok
 
 
 @pytest.mark.asyncio

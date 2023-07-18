@@ -3,7 +3,7 @@ import functools
 import typing as t
 from dataclasses import dataclass
 
-from seito.monad.container import CommonContainer
+from fateful.monad.container import CommonContainer
 
 T_co = t.TypeVar("T_co", covariant=True)
 U = t.TypeVar("U")

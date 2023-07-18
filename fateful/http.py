@@ -6,9 +6,9 @@ from typing import Any, Type
 
 from aiohttp import ClientError, ClientSession
 
-from seito.json import JsArray, JsObject, try_parse
-from seito.monad.async_result import async_try
-from seito.monad.result import Err, Ok
+from fateful.json import JsArray, JsObject, try_parse
+from fateful.monad.async_result import async_try
+from fateful.monad.result import Err, Ok
 
 
 class HttpMethods(str, Enum):

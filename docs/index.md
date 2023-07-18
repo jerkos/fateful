@@ -1,4 +1,4 @@
-![seito](img/seito.png)
+![fateful](img/fateful.png)
 
 # Introduction
 
@@ -46,32 +46,32 @@ The Result Monad offers several benefits:
 
 # Getting started
 
-Simply install {==seito==} coming directly from pypi with your favorite python package manager.
+Simply install {==fateful==} coming directly from pypi with your favorite python package manager.
 This will install all needed dependencies.
 
 !!! note "made with pdm"
-    _seito_ uses **pdm** as dependency manager
+    _fateful_ uses **pdm** as dependency manager
 
 ## with package manager
 
 === "poetry"
     ```bash
-    poetry add seito
+    poetry add fateful
     ```
 
 === "pdm"
     ```bash
-    pdm add seito
+    pdm add fateful
     ```
 
 === "pip"
     ```bash
-    pip install seito
+    pip install fateful
     ```
 
 ## Note on type checking
 
-{==Seito==} has been developed in VSCode using Pyright type checker (with Pylance).
+{==fateful==} has been developed in VSCode using Pyright type checker (with Pylance).
 A focus has been made on type checking and providing decent completion with this setup.
 
 A first run on mypy showed a lot of error not picked up by pyright, the idea is to fix

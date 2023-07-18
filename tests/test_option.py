@@ -6,9 +6,9 @@ from functools import partial
 import pytest
 from assertpy import assert_that
 
-from seito.http import HttpException
-from seito.monad.container import EmptyError
-from seito.monad.func import (
+from fateful.http import HttpException
+from fateful.monad.container import EmptyError
+from fateful.monad.func import (
     MatchError,
     _,
     default,
@@ -17,8 +17,8 @@ from seito.monad.func import (
     raise_error,
     when,
 )
-from seito.monad.option import Empty, Null, Some, lift_opt, none, opt, option
-from seito.monad.result import Err, Ok
+from fateful.monad.option import Empty, Null, Some, lift_opt, none, opt, option
+from fateful.monad.result import Err, Ok
 
 
 class A:

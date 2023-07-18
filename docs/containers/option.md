@@ -1,6 +1,6 @@
 # ❓ Option monad
 
-_Seito_ exposes a famous container for dealing with {==None==} or more generally speaking
+_fateful_ exposes a famous container for dealing with {==None==} or more generally speaking
 empty values (i.e. in python all instances of collections which are falsy).
 
 It is called {==Optional==}. Basically, two classes derives from this base class, {==Some==}
@@ -15,7 +15,7 @@ which represents a computed result which is not None or not falsy, and at the op
 Let's take a look at the code and api to get the basis:
 
 ```py linenums="1"
-from seito import opt
+from fateful import opt
 
 # optional is Some[str]
 opt('value').or_else('new value')
@@ -37,7 +37,7 @@ for i in a:
 One funny thing is that you can forward a computation, like this
 
 ```py linenums="1"
-from seito import opt
+from fateful import opt
 # forwarding value
 class A:
     x = 5
@@ -50,7 +50,7 @@ opt(A()).y.or_else(0) # returns 0
 We also can use pattern matching:
 
 ```python linenums="1"
-from seito import opt, Some, Empty, default
+from fateful import opt, Some, Empty, default
 
 result = opt("value").match(
     Some(_) >> 1,
@@ -79,7 +79,7 @@ opt(value).map(
 ## Lift known function to handle optional
 
 ```python linenums="1"
-from seito import lift_opt
+from fateful import lift_opt
 
 # function which throws an error
 def divide(a, b):
@@ -93,4 +93,4 @@ val  = lifted_fn(1, 0).or_else(0)
 
 ## 💻 API reference
 
-::: seito.monad.option
+::: fateful.monad.option

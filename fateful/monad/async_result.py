@@ -5,8 +5,8 @@ from inspect import isawaitable
 
 import typing_extensions as te
 
-from seito.monad.func import Default, MatchableMixin, When
-from seito.monad.result import Err, Ok, Result, ResultShortcutError
+from fateful.monad.func import Default, MatchableMixin, When
+from fateful.monad.result import Err, Ok, Result, ResultShortcutError
 
 P_mapper = t.ParamSpec("P_mapper")
 P = t.ParamSpec("P")

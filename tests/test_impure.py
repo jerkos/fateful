@@ -1,6 +1,6 @@
 import random
 
-from seito.monad.effect import Effect, lift_effect
+from fateful.monad.effect import Effect, lift_effect
 
 
 def test_impure():

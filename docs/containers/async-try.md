@@ -22,7 +22,7 @@ With async result we can do this:
 
 ```py linenums="1"
 import asyncio
-from seito.monad.async_result import async_try
+from fateful.monad.async_result import async_try
 
 
 async def wait_for(value, *, time=100):
@@ -77,7 +77,7 @@ async def main():
 
 ```py linenums="1"
 import random
-from seito.monad.async_result import AsyncResult
+from fateful.monad.async_result import AsyncResult
 
 async def main():
     return await AsyncResult.of(wait_for, random.randint()).recover(0)
@@ -98,4 +98,4 @@ async def main():
 
 ## 💻 API reference
 
-::: seito.monad.async_result
+::: fateful.monad.async_result

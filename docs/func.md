@@ -1,3 +1,3 @@
 ## 💻 API reference
 
-::: seito.monad.func
+::: fateful.monad.func
