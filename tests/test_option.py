@@ -4,9 +4,9 @@ import unittest
 from functools import partial
 
 import pytest
+from aiohttp import ClientResponseError
 from assertpy import assert_that
 
-from fateful.http import HttpException
 from fateful.monad.container import EmptyError
 from fateful.monad.func import (
     MatchError,
@@ -143,8 +143,10 @@ class Test(unittest.TestCase):
             case Empty():
                 logging.debug("Empty")
 
-        match Err(HttpException(400, detail="toto")):
-            case Err(HttpException(code=x)):
+        match Err(
+            ClientResponseError(None, (), status=400, message="toto")  # type: ignore
+        ):
+            case Err(ClientResponseError(status=x)):
                 print(f"Got {x} code from error")
 
         value = opt("tata")
