@@ -1,6 +1,6 @@
 # fateful
 
-*Option* and *Result* container for python !
+*Option* and *Result* container for python
 
 ![fateful](./docs/img/fateful.png)
 
@@ -13,7 +13,7 @@ comprehensions. However, when you start to chain function calls (or predicate
  In some famous languages, we have *Option* and *Result* monad helping user to handle
  optional values (i.e. None values) and possibly failing computation (Rust, Java, Kotlin...)
 
- So, this very small Python library implements those monads - Option and Result -
+ So, this very small Python library implements those monads - Option, Result or AsyncResult -
  providing a way to handle optional values / computation failures in a functional style.
 
  A focus has been made to typing (but can still be improved of course !)
@@ -21,14 +21,20 @@ comprehensions. However, when you start to chain function calls (or predicate
 
 ## Option monad
 
-The Option Monad, also known as the Maybe Monad, is a concept from functional programming that provides a way to handle optional values in a more controlled and expressive manner. It helps avoid null or undefined errors by encapsulating a value that may or may not be present. The key idea behind the Option Monad is to provide a container that can either hold a value (Some) or indicate the absence of a value (None).
+The Option Monad, also known as the Maybe Monad, is a concept from functional programming that provides
+a way to handle optional values in a more controlled and expressive manner. It helps avoid null or
+undefined errors by encapsulating a value that may or may not be present. The key idea behind the
+Option Monad is to provide a container that can either hold a value (Some) or indicate the absence
+of a value (None).
 
 The Option Monad offers several benefits, including:
 
 - Safety: It helps prevent null or undefined errors that can occur when working with optional values.
 - Clarity: It makes the presence or absence of a value explicit, enhancing the readability of code.
-- Composability: It allows for chaining operations on optional values without explicitly checking for null or undefined values.
-- Functional style: It promotes functional programming principles by encouraging pure functions and immutability.
+- Composability: It allows for chaining operations on optional values without explicitly checking for
+  null or undefined values.
+- Functional style: It promotes functional programming principles by encouraging pure functions and
+  immutability.
 
 
 When you do not know if a value is None or is actually a real value / object, use **opt**
@@ -91,7 +97,7 @@ result = option("some").map(lambda x: len(x) * 2).or_(0)
 An option can contain another option type but can be flattened
 
 ```python
-x = option(option(option(1))).flatten() # x is Some[int]
+x = option(option(option(1))).flatten() # x is Some[Some[Some[int]]]
 
 y: Some[Some[Some[int]]] = Some(Some(Some(1)))
 x: Some[int] = Some(Some(Some(1))).flatten()
@@ -114,9 +120,13 @@ x: Empty = maybe(0)
 
 ## Result monad
 
-The Result Monad is another concept from functional programming that is used to handle computations that may produce a successful result or a failure. It provides a way to encapsulate the outcome of an operation, allowing you to handle and propagate errors in a controlled manner.
+The Result Monad is another concept from functional programming that is used to handle computations
+that may produce a successful result or a failure. It provides a way to encapsulate the outcome of
+an operation, allowing you to handle and propagate errors in a controlled manner.
 
-The Result Monad typically has two possible states: Ok (representing a successful result) and Err (representing a failure or an error condition). The Ok state contains the successful result value, while the Err state contains information about the failure, such as an error message or an error object.
+The Result Monad typically has two possible states: Ok (representing a successful result) and Err
+(representing a failure or an error condition). The Ok state contains the successful result value,
+while the Err state contains information about the failure, such as an error message or an error object.
 
 The Result Monad offers several benefits:
 
@@ -129,12 +139,14 @@ The Result Monad offers several benefits:
 def may_fail(x: int) -> float:
     return 1 / x
 
-from fateful.monad.try_ import Try
+from fateful.monad.resut import sync_try
 
-result = Try.of(may_fail).on_error((ZeroDivisionError,))(1).or_(10.0)
+r: Ok[float] | Err[ZeroDivisionError] = sync_try(may_fail, ZeroDivisionError)(1)
+result = sync_try(may_fail, ZeroDivisionError)(1).or_(10.0)
+
 assert result == 1.0
 
-result = Try.of(may_fail).on_error((ZeroDivisionError,))(0).or_(10.0)
+result = sync_try(may_fail, ZeroDivisonError)(0).or_(10.0)
 assert result == 10.0
 
 
@@ -150,16 +162,20 @@ async def divide_async(a, b):
     await asyncio.sleep(0.1)
     return a / b
 
-value = await async_try(add_async, 1, 1).or_else(lambda: 4)
-value = await async_try(add_async, 1, 1).or_(4)
-divide: AsyncResult[..., float, ZeroDivisionError] = async_try(add_async, 1, 1)
-divide.on_errors((ValueError,)) # mypy / pyright complains because ZeroDiisionError does not match ValueError
-result: Ok[float] | Err[ZeroDivisionError] = await divide.on_errors((ZeroDivisionError,)).execute()
+from fateful.monad import async_try
+
+value = await async_try(add_async)( 1, 1).or_else(lambda: 4)
+
+value = await async_try(add_async)(1, 1).or_(4)
+
+divide: AsyncResult[..., float, ZeroDivisionError] = async_try(add_async, ZeroDivisionError)(1, 1)
+
+result: Ok[float] | Err[ZeroDivisionError] = await divide..execute()
 
 # transforming value
 value = await divide.map(lambda r: r - 100).or_(0)
 
-match (await divide.on_errors((ZeroDivisionError,)).execute()):
+match (await divide.execute()):
     case Ok(val):
         return val
     case Err(err):
@@ -172,19 +188,32 @@ match (await divide.on_errors((ZeroDivisionError,)).execute()):
 
 Miscellaneous functions dealing with http client functions
 
-Wraps aihttp for perform http call and parsing results optionnaly as json
+Wraps aiohttp for perform http call and parsing results optionnaly as json
+
+{==aiohttp==} is a library of choice for making http requests. A good alternative is {==httpx==}
+but various benchmarks show that it is slightly slower.
 
 ```python
-
+page_content: str = await try_get("http://google.com").or_raise()
 ```
 
+## Container module
+
+Simple subclass to return option monad when getting values
+implementation of list and dict
+
+```python
+x = opt_list([1,2,3])
+v: Some[int] = x.at(0)
+v: Empty = x.at(12)
+``````
 ## Json module
 
 Miscellaneous functions dealing with json (parsing, manipulating...)
 
 ``` python
->>> from fateful.json import obj
->>> i = obj({'z-index': 1000})
+>>> from fateful.json import opt_dict
+>>> i = opt_dict({'z-index': 1000})
 >>> i.toto = [4, 5, 6]
 >>> str(i)
 '{"z-index": 1000, "toto": [4, 5, 6]}'

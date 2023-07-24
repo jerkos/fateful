@@ -1,7 +1,6 @@
-import typing
-from typing import Any, Mapping, Type
+import typing as t
 
-from fateful.monad.option import Empty, Some, none, opt
+from fateful.container import opt_dict, opt_list
 from fateful.monad.result import sync_try
 
 try:
@@ -11,72 +10,31 @@ except ImportError:
 
 from json.decoder import JSONDecodeError
 
+js_object: t.TypeAlias = opt_dict[str, t.Any | "js_array"]
 
-class JsArray(list):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    @typing.overload
-    def __getitem__(self, index: typing.SupportsIndex) -> Any:  # pragma: no cover
-        ...
-
-    @typing.overload
-    def __getitem__(self, index: slice) -> list:  # pragma: no cover
-        ...
-
-    def __getitem__(self, index):
-        item = super().__getitem__(index)
-        if isinstance(item, Mapping):
-            return JsObject(**item)
-        return item
+js_array: t.TypeAlias = opt_list[js_object | t.Any | "js_array"]
 
 
-class JsObject(dict):
-    """ """
-
-    def __init__(self, *args, **kwargs):
-        super(JsObject, self).__init__(*args, **kwargs)
-
-    def stringify(self, **kwargs: Any):
-        return json.dumps(self, **kwargs)
-
-    def map_to(self, clazz: Type):
-        """expected a dataclass or a basemodel"""
-        return clazz(**self)
-
-    def __getitem__(self, item: str) -> Some | Empty:
-        try:
-            v = super(JsObject, self).__getitem__(item)
-            return opt(v)
-        except KeyError:
-            return none
-
-    def __getattr__(self, item: str) -> Some | Empty:
-        return self[item]
-
-    def __setattr__(self, key, value):
-        self[key] = value
-
-    def __str__(self):
-        return json.dumps(self)
+T = t.TypeVar("T")
 
 
-def js(*args, **kwargs):
-    """ """
-    return JsObject(*args, **kwargs)
-
-
-def parse(string: str | bytes | bytearray, *, response_class=None, **kwargs: Any):
-    """ """
+def parse(
+    string: str | bytes | bytearray,
+    *,
+    object_hook: type[T] | None = None,
+    **kwargs: t.Any,
+) -> js_array | js_object | list[T] | T:
+    """Parse a JSON string into a JsObject or JsArray or
+    a sequence of arbitrary objects."""
     value = json.loads(string, **kwargs)
-    is_list = isinstance(value, list)
-    if response_class is None:
+    is_list = isinstance(value, t.Sequence)
+    if object_hook is None:
         if is_list:
-            return JsArray(value)
-        return JsObject(value)
+            return js_array(value)
+        return js_object(value)
     if is_list:
-        return [response_class(**val) for val in value]
-    return response_class(**value)
+        return [object_hook(**val) for val in value]
+    return object_hook(**value)
 
 
-try_parse = sync_try(parse, exc=(JSONDecodeError,))
+try_parse = sync_try(parse, exc=JSONDecodeError)
