@@ -21,7 +21,7 @@ build-backend = "pdm.backend"
 [project]
 name = "fateful"
 version = "0.2.6"
-description = "rusty container"
+description = "rusty Option and Result container for python. Ready for pattern matching"
 authors = [
     {name = "Marco", email = "cram@hotmail.fr"},
 ]

@@ -37,5 +37,6 @@ nav:
     - 🚀 Async try: containers/async-try.md
   - Useful functions: func.md
   - Http helpers: http.md
+  - Container: container.md
   - Json helpers: json.md
 

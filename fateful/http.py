@@ -1,18 +1,19 @@
 import logging
+import typing as t
 from enum import Enum
 from functools import partial
 from json import JSONDecodeError
-from typing import Any, Type
 
 from aiohttp import ClientError, ClientSession
+from yarl import URL
 
-from fateful.json import JsArray, JsObject, try_parse
+from fateful.json import js_array, js_object, try_parse
 from fateful.monad.async_result import async_try
 from fateful.monad.result import Err, Ok
 
 
 class HttpMethods(str, Enum):
-    """ """
+    """A list of basic HTTP methods."""
 
     GET = "GET"
     POST = "POST"
@@ -23,43 +24,24 @@ class HttpMethods(str, Enum):
 
 
 class ContentType:
-    """ """
+    """Content-Type header values."""
 
     value = "Content-Type"
     APPLICATION_JSON = "application/json"
 
 
-class NetworkError(Exception):
-    """ """
-
-    ...
-
-
-class HttpException(NetworkError):
-    """ """
-
-    def __init__(self, code: int, detail: str):
-        self.code = code
-        self.detail = detail
-
-
-class NetworkException(NetworkError):
-    """ """
-
-    ...
+T = t.TypeVar("T")
 
 
 async def request(
     method: HttpMethods,
-    url,
+    url: str | URL,
     /,
     *,
     session: ClientSession,
-    response_class: Type[Any] | None = None,
-    **kwargs: Any,
-) -> Ok[str | JsArray | JsObject | Any] | Err[
-    NetworkError | ClientError | JSONDecodeError | Exception
-]:
+    object_hook: type[T] | None = None,
+    **kwargs: t.Any,
+) -> Ok[str | js_array | js_object | T | list[T]] | Err[ClientError | JSONDecodeError]:
     """
     Generic method for making a request
     """
@@ -68,11 +50,10 @@ async def request(
             try:
                 content_type = resp.headers.getall(ContentType.value)
                 is_json = ContentType.APPLICATION_JSON in content_type
+                resp.raise_for_status()
                 resp_as_text = await resp.text()
-                if resp.status >= 400:
-                    return Err(HttpException(resp.status, resp_as_text))
                 if is_json:
-                    return try_parse(resp_as_text, response_class=response_class)
+                    return try_parse(resp_as_text, object_hook=object_hook)
                 return Ok(resp_as_text)
             except ClientError as e:  # pragma: no cover
                 logging.error(e)
@@ -85,7 +66,16 @@ async def request(
 get = partial(request, HttpMethods.GET)
 
 
-def try_get(url, **kwargs):
+def try_get(url: str | URL, **kwargs):
+    """
+    return an async try of get
+
+    Args:
+        url: url to get
+
+    Returns:
+        : async try
+    """
     return async_try(get)(url, **kwargs)
 
 
