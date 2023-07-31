@@ -30,7 +30,7 @@ class Test(unittest.TestCase):
 
     def test_stringify(self):
         i = opt_dict({"z-index": 1000})
-        self.assertEqual(i.stringify(sort_keys=True), """{"z-index": 1000}""")
+        self.assertEqual(i.stringify(), """{"z-index":1000}""")
 
     def test_parse_obj(self):
         value = """[
