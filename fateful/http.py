@@ -3,6 +3,7 @@ import typing as t
 from enum import Enum
 from functools import partial
 from json import JSONDecodeError
+
 try:
     from aiohttp import ClientError, ClientSession
     from yarl import URL

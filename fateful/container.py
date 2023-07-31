@@ -74,7 +74,10 @@ class opt_dict(dict[K, V], _ConverterProtocol):
             self[k] = self._convert(v)
 
     def stringify(self, *args: t.Any, **kwargs: t.Any) -> str:
-        return json.dumps(self, *args, **kwargs)
+        r: str | bytes = json.dumps(self, *args, **kwargs)
+        if isinstance(r, bytes):
+            return r.decode("utf-8")
+        return r
 
     def map_to(self, clazz: type[T]) -> T:
         """expected a dataclass or a pydantic basemodel"""
