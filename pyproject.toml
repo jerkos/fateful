@@ -20,15 +20,19 @@ build-backend = "pdm.backend"
 
 [project]
 name = "fateful"
-version = "0.3.0"
+version = "0.4.0"
 description = "rusty Option and Result container for python. Ready for pattern matching and asyncio"
 authors = [
     {name = "Marco", email = "cram@hotmail.fr"},
 ]
 dependencies = [
-    "aiohttp>=3.8.4",
     "pampy>=0.3.0",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
 license = {text = "MIT"}
+
+[project.optional-dependencies]
+http = ["aiohttp >= 3.8.4"]
+orjson = ["orjson"]
+all = ["fateful[http,orjson]"]

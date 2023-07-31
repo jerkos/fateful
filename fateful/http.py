@@ -3,9 +3,12 @@ import typing as t
 from enum import Enum
 from functools import partial
 from json import JSONDecodeError
-
-from aiohttp import ClientError, ClientSession
-from yarl import URL
+try:
+    from aiohttp import ClientError, ClientSession
+    from yarl import URL
+except ImportError:
+    logging.warning("aiohttp and yarl are not installed")
+    raise
 
 from fateful.json import js_array, js_object, try_parse
 from fateful.monad.async_result import async_try

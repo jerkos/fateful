@@ -19,6 +19,18 @@ comprehensions. However, when you start to chain function calls (or predicate
  A focus has been made to typing (but can still be improved of course !)
 
 
+## Installation
+
+```bash
+pip install fateful
+
+pip install fateful[http] # install aiohttp to enable async api calls helper
+
+pip install fateful[orjson] # install orjson a fast json implementation
+
+pip install fateful[all] # install all optional dependencies
+```
+
 ## Option monad
 
 The Option Monad, also known as the Maybe Monad, is a concept from functional programming that provides
@@ -59,7 +71,7 @@ Traceback (most recent call last):
 ValueError: Option is empty
 ```
 
-Option monad implements tu iteration protocl
+Option monad implements the iteration protocl
 
 ```python
 >>> o = opt([1, 2, 3]).for_each(print)
@@ -190,7 +202,7 @@ Miscellaneous functions dealing with http client functions
 
 Wraps aiohttp for perform http call and parsing results optionnaly as json
 
-{==aiohttp==} is a library of choice for making http requests. A good alternative is {==httpx==}
+*aiohttp* is a library of choice for making http requests. A good alternative is *httpx*
 but various benchmarks show that it is slightly slower.
 
 ```python
@@ -206,7 +218,7 @@ implementation of list and dict
 x = opt_list([1,2,3])
 v: Some[int] = x.at(0)
 v: Empty = x.at(12)
-``````
+```
 ## Json module
 
 Miscellaneous functions dealing with json (parsing, manipulating...)

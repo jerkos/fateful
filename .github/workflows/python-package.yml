@@ -27,7 +27,7 @@ jobs:
         enable-pep582: false
         allow-python-prereleases: false
     - name: Install dependencies
-      run: pdm install
+      run: pdm install --group all
     - name: Test with pytest
       run: |
         pdm run pytest
